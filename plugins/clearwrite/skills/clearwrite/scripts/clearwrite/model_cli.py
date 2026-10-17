@@ -49,7 +49,7 @@ class CLIInfo:
 def _environment() -> dict[str, str]:
     env = os.environ.copy()
     # This integration uses the CLI's own login, not an inherited billable API key.
-    for key in ('OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN',
+    for key in ('OPENAI_API_KEY', 'CODEX_API_KEY', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN',
                 'CLAUDE_CODE_OAUTH_TOKEN', 'PANGRAM_API_KEY'):
         env.pop(key, None)
     env.update(PYTHONIOENCODING='utf-8', NO_COLOR='1', TERM='dumb')
@@ -142,8 +142,7 @@ def _command(info: CLIInfo, directory: Path, model: str | None, schema: dict | N
     if info.backend == 'codex':
         argv = [*info.argv, 'exec', '--ignore-user-config', '--ephemeral', '--skip-git-repo-check',
                 '--sandbox', 'read-only', '--color', 'never', '--json',
-                '--output-schema', str(directory / 'schema.json'),
-                '--output-last-message', str(directory / 'result.json'), '-C', str(directory)]
+                '--output-schema', str(directory / 'schema.json'), '-C', str(directory)]
         # These are invocation-local restrictions, not changes to user settings.
         for feature in CODEX_DISABLED_FEATURES:
             argv += ['--disable', feature]
@@ -188,44 +187,106 @@ def _run(info: CLIInfo, prompt: str, directory: Path, model: str | None,
          timeout: float, cancel: threading.Event, schema: dict | None = None) -> dict:
     argv = _command(info, directory, model, schema)
     (directory / 'schema.json').write_text(json.dumps(schema or proposal_schema()), encoding='utf-8')
-    input_path, out_path, err_path = (directory / name for name in ('input.json', 'stdout.log', 'stderr.log'))
-    input_path.write_bytes(prompt.encode('utf-8'))
     flags = (getattr(subprocess, 'CREATE_NO_WINDOW', 0) | getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)) if os.name == 'nt' else 0
-    with input_path.open('rb') as stdin, out_path.open('wb') as stdout, err_path.open('wb') as stderr:
-        try:
-            process = subprocess.Popen(argv, stdin=stdin, stdout=stdout, stderr=stderr, cwd=directory,
-                                       env=_environment(), creationflags=flags, start_new_session=os.name != 'nt')
-        except OSError:
-            raise ProviderError('모델 CLI를 시작하지 못했습니다. 설치 상태를 확인하세요.') from None
-        deadline = time.monotonic() + timeout
-        try:
-            while process.poll() is None:
-                if cancel.wait(.1):
-                    raise ModelCancelled('요청을 취소했습니다. 이미 처리된 모델 사용량은 남을 수 있습니다.')
-                if time.monotonic() >= deadline:
-                    raise ProviderError('모델 응답 시간이 초과되었습니다. 원문은 변경하지 않았습니다.')
-                if any(p.stat().st_size > MAX_OUTPUT for p in (out_path, err_path)):
-                    raise ProviderError('모델 CLI 응답이 허용 크기를 넘었습니다.')
-            if cancel.is_set():
-                raise ModelCancelled('요청을 취소했습니다.')
-            if process.returncode:
-                raise ProviderError('모델 요청에 실패했습니다. 해당 CLI의 로그인·사용량·지원 모델을 확인하세요.')
-        finally:
-            _terminate(process)
-    result_path = directory / 'result.json' if info.backend == 'codex' else out_path
-    if not result_path.is_file() or result_path.stat().st_size > MAX_OUTPUT:
-        raise ProviderError('모델이 유효한 편집 결과를 남기지 않았습니다.')
     try:
-        data = strict_json(result_path.read_text(encoding='utf-8-sig'))
+        process = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   cwd=directory, env=_environment(), creationflags=flags,
+                                   start_new_session=os.name != 'nt')
+    except OSError:
+        raise ProviderError('모델 CLI를 시작하지 못했습니다. 설치 상태를 확인하세요.') from None
+    output = bytearray()
+    oversized, pipe_error = threading.Event(), threading.Event()
+
+    def read_pipe(pipe, *, keep: bool) -> None:
+        total = 0
+        try:
+            while chunk := pipe.read(65536):
+                total += len(chunk)
+                if keep:
+                    output.extend(chunk[:max(0, MAX_OUTPUT - len(output))])
+                if total > MAX_OUTPUT:
+                    oversized.set()
+        except OSError:
+            pipe_error.set()
+        finally:
+            pipe.close()
+
+    def write_prompt() -> None:
+        try:
+            process.stdin.write(prompt.encode('utf-8'))
+            process.stdin.flush()
+        except (BrokenPipeError, OSError):
+            pipe_error.set()
+        finally:
+            try:
+                process.stdin.close()
+            except OSError:
+                pipe_error.set()
+
+    # Pipes are read concurrently so a full stdout/stderr pipe cannot deadlock
+    # prompt delivery. Only bounded stdout is retained; stderr is discarded.
+    workers = [threading.Thread(target=read_pipe, args=(process.stdout,), kwargs={'keep': True}, daemon=True),
+               threading.Thread(target=read_pipe, args=(process.stderr,), kwargs={'keep': False}, daemon=True),
+               threading.Thread(target=write_prompt, daemon=True)]
+    try:
+        for worker in workers:
+            worker.start()
+        deadline = time.monotonic() + timeout
+        while process.poll() is None:
+            if cancel.wait(.05):
+                raise ModelCancelled('요청을 취소했습니다. 이미 처리된 모델 사용량은 남을 수 있습니다.')
+            if time.monotonic() >= deadline:
+                raise ProviderError('모델 응답 시간이 초과되었습니다. 원문은 변경하지 않았습니다.')
+            if oversized.is_set():
+                raise ProviderError('모델 CLI 응답이 허용 크기를 넘었습니다.')
+        for worker in workers:
+            worker.join(timeout=3)
+        if cancel.is_set():
+            raise ModelCancelled('요청을 취소했습니다.')
+        if oversized.is_set():
+            raise ProviderError('모델 CLI 응답이 허용 크기를 넘었습니다.')
+        if process.returncode:
+            raise ProviderError('모델 요청에 실패했습니다. 해당 CLI의 로그인·사용량·지원 모델을 확인하세요.')
+        if pipe_error.is_set() or any(worker.is_alive() for worker in workers):
+            raise ProviderError('모델 CLI 통신을 완료하지 못했습니다. 원문은 유지합니다.')
+        raw = output.decode('utf-8-sig')
         if info.backend == 'claude':
+            data = strict_json(raw)
             if not isinstance(data, dict) or data.get('is_error'):
                 raise InputError('모델 요청 실패')
             data = data.get('structured_output') or strict_json(data.get('result', ''))
+        else:
+            # Codex --json emits JSONL; the final agent message contains the
+            # schema-constrained object. No result file is requested.
+            final_message = None
+            completed = False
+            for line in raw.splitlines():
+                if not line.strip():
+                    continue
+                event = strict_json(line)
+                if not isinstance(event, dict):
+                    raise InputError('잘못된 모델 이벤트')
+                if event.get('type') in {'error', 'turn.failed'}:
+                    raise InputError('모델 요청 실패')
+                item = event.get('item')
+                if event.get('type') == 'item.completed' and isinstance(item, dict) and item.get('type') == 'agent_message':
+                    final_message = item.get('text')
+                if event.get('type') == 'turn.completed':
+                    completed = True
+            if not completed or not isinstance(final_message, str):
+                raise InputError('모델의 최종 응답이 없습니다.')
+            data = strict_json(final_message)
         if not isinstance(data, dict):
             raise InputError('객체가 아닌 결과')
         return data
     except (InputError, UnicodeError, OSError):
         raise ProviderError('모델 응답 형식이 올바르지 않습니다. 원문은 유지합니다.') from None
+    finally:
+        _terminate(process)
+        for worker in workers:
+            if worker.ident is not None:
+                worker.join(timeout=3)
+        output.clear()
 
 
 def model_plan(text: str, *, backend: str, allow_model: bool = False, model: str | None = None,

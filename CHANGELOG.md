@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 — 2026-10-18
+
+Replaced ClearWrite's prompt, response and stderr temporary files with bounded subprocess pipes. Codex responses now come from the final agent message in its documented JSONL stream; Claude's JSON envelope is read from stdout. Only the static response schema is written to the temporary working directory. ClearWrite no longer creates prose-bearing request files even if the parent process exits abruptly. CLI/provider-owned storage and earlier-version leftovers remain outside this guarantee.
+
+Completed, failed and cancelled server jobs expire 15 minutes after completion using a background cleaner, without waiting for another request. Reads also reject expired jobs. Shutdown clears stored records, cancels running work and prevents late results from restoring a cleared record. The editor's current text and files explicitly saved by the user are retained.
+
+Added privacy regressions covering abrupt exits, cancellation, timeouts, malformed/oversized output, simultaneous pipe pressure, idle expiry and shutdown races. Also removed inherited `CODEX_API_KEY` from the model CLI environment. Public command options and saved report formats are unchanged.
+
 ## 0.3.0 — 2026-10-17
 
 Removed Pangram integration. Added consent-gated Codex/Claude style assessments with four 0–25 dimensions, exact quotation and input-hash validation, and a separate model-analysis action. Added applied-character change statistics and JSON export. Failed/cancelled/stale assessments clear prior scores while preserving accepted editing output. Existing CLI callers must migrate from Pangram flags to `detect --provider codex|claude --allow-model`.

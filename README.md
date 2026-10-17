@@ -4,7 +4,7 @@
 
 **어디를 왜 고쳤는지 보여 주는 한국어·영어 윤문 프로그램**
 
-[Windows 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/download/v0.3.0/ClearWrite-0.3.0-Windows-x64.zip) · [사용 설명서](docs/DESKTOP.md) · [English](README.en.md) · [오류 제보](https://github.com/xoxo787/clearwrite/issues)
+[Windows 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/download/v0.3.1/ClearWrite-0.3.1-Windows-x64.zip) · [사용 설명서](docs/DESKTOP.md) · [English](README.en.md) · [오류 제보](https://github.com/xoxo787/clearwrite/issues)
 
 [![Offline tests](https://github.com/xoxo787/clearwrite/actions/workflows/ci.yml/badge.svg)](https://github.com/xoxo787/clearwrite/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-285d4c)](LICENSE)
@@ -39,7 +39,7 @@ ClearWrite는 글을 다듬고, **어떤 표현을 왜 바꿨는지** 함께 보
 ### Windows에서 사용하기
 
 1. [Codex CLI](https://developers.openai.com/codex/cli/) 또는 [Claude Code](https://code.claude.com/docs/en/overview)를 설치하고 본인 계정으로 로그인합니다. 데스크톱 앱 로그인만으로 CLI가 준비되지는 않습니다.
-2. [Windows x64 ZIP](https://github.com/xoxo787/clearwrite/releases/download/v0.3.0/ClearWrite-0.3.0-Windows-x64.zip)을 내려받아 **전체 압축을 풉니다**.
+2. [Windows x64 ZIP](https://github.com/xoxo787/clearwrite/releases/download/v0.3.1/ClearWrite-0.3.1-Windows-x64.zip)을 내려받아 **전체 압축을 풉니다**.
 3. `ClearWrite/ClearWrite.exe`를 실행합니다. `_internal` 폴더는 실행 파일 옆에 그대로 두세요.
 4. **예시 체험**을 눌러 수정 표시와 이유를 살펴봅니다. 이 버튼은 모델을 호출하지 않습니다.
 5. 글을 입력하고 사용할 모델을 고릅니다. 전송에 동의한 뒤 **윤문하기**를 누릅니다.
@@ -105,7 +105,9 @@ ClearWrite는 글의 뜻과 말투를 유지하면서 **필요한 만큼 다듬�
 - 글 전송에 동의해야 모델을 호출합니다. 편집 화면은 내 PC에서 열리고, 모델 처리는 OpenAI 또는 Anthropic 서비스에서 이뤄집니다.
 - **예시 체험 · 로컬 규칙 분석 · 원문 보존**은 모델을 호출하지 않습니다.
 - 모델에는 제공한 글만 처리하도록 요청하며 도구·MCP·플러그인을 제한합니다. 시간·출력 한도를 설정하고 취소 기능을 제공합니다.
-- 모델 요청 중에는 원문과 응답을 평문 임시 파일에 기록합니다. 작업이 정상적으로 끝나면 지우지만, 앱이 강제 종료되면 남을 수 있습니다.
+- 원문과 응답은 프로세스 간 통신으로 주고받으며, ClearWrite는 이를 임시 파일에 쓰지 않습니다. 임시 작업 폴더에는 글이 들어 있지 않은 응답 형식 파일만 둡니다.
+- 서버의 완료·실패·취소 기록은 작업이 끝난 뒤 15분이 지나면 새 요청이 없어도 자동으로 지웁니다. 앱을 종료할 때도 정리합니다. 화면에 열어 둔 글과 직접 저장한 파일은 지우지 않습니다.
+- 이 처리는 ClearWrite의 새 요청에 적용됩니다. 구버전이 남긴 파일이나 CLI 자체의 캐시·서비스 보관까지 삭제하지는 않습니다.
 - 직접 저장한 검수 JSON에는 원문이 포함됩니다. 파일은 암호화하지 않으므로 보관하거나 공유할 때 내용을 확인하세요.
 
 전송·저장 범위는 [보안 문서](SECURITY.md)에서 확인할 수 있습니다.
@@ -136,7 +138,7 @@ python scripts/install_codex.py --kind skill --apply
 | Windows x64 포터블 EXE | 실행·중복 실행 재사용·종료 확인 |
 | Codex CLI 0.147.0 | 실제 윤문·문체 분석 연결 확인 |
 | Claude Code | 모의 프로세스·응답 규약 검사 완료, 실제 호출 미검증 |
-| 로컬 자동 검사 | Windows / Python 3.13.14에서 212개 실행, 210개 통과·2개 생략 |
+| 로컬 자동 검사 | Windows / Python 3.13.14에서 223개 실행, 221개 통과·2개 생략 |
 | 브라우저 화면 | 형광펜·수정 이유·점수·다운로드·실패·취소·입력 변경·반응형 검사 |
 | Python wheel | 새 가상 환경에서 오프라인 설치·CLI 실행 확인 |
 | GitHub Actions | Ubuntu·Windows·macOS / Python 3.10~3.13의 12개 조합 통과 |

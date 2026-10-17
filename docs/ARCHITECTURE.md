@@ -52,3 +52,9 @@
 `POST /api/jobs`의 `action=style`, `backend=codex|claude`, `allow_model=true`로 명시 실행합니다. `candidate`는 선택 문자열이며 실제 화면의 현재 수정본만 클라이언트가 보냅니다. API가 임의 candidate를 받는 것도 가능하므로 원문과의 실제 수정 비율은 별도 `comparison` 결과만 표시합니다. 예전 action=detect와 allow_external은 거부합니다. 문체 실패로 원문·수정본을 재작성하지 않습니다.
 
 `comparison.change_statistics`는 실제 적용된 편집 안의 diff에서 삭제·추가된 코드포인트 수를 합칩니다. `(removed+added)/(original+result)*100`이며 공백을 포함합니다. 보존 검사에 사용하는 기존 전체 문서 유사도와는 범위가 다를 수 있습니다. 마커의 빈 text는 수치에 영향을 주지 않습니다. 화면 편집 세대가 바뀌면 과거 모델 점수·수정 비율과 내보내기 상태를 무효화합니다.
+
+## 0.3.1 요청·기록 수명
+
+`model_cli._run`은 입력 쓰기와 stdout/stderr 읽기를 별도 스레드에서 수행해 파이프 포화를 피합니다. stdout 보관과 각 출력 스트림은 2MB로 제한하고, stderr는 보관하지 않습니다. 요청 내용과 응답은 ClearWrite의 디스크 파일로 만들지 않습니다. Codex JSONL은 최종 agent message와 turn completion을 확인한 뒤 엄격한 JSON으로 해석합니다. 오류·취소·초과 시 자식 프로세스를 정리하고 정제한 오류만 반환합니다. [Codex 비대화형 출력 규약](https://developers.openai.com/codex/noninteractive)
+
+`Jobs`는 완료 시각을 기준으로 기록을 만료합니다. 백그라운드 스레드가 유휴 중에도 정리하며, get/cancel도 만료를 검사합니다. 실행 중 작업은 TTL로 지우지 않습니다. close는 새 요청을 막고 기록을 비운 뒤 작업 취소와 정리 스레드 종료를 처리합니다. 화면에 이미 전달된 결과나 저장 파일의 수명은 별개입니다.

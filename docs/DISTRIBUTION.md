@@ -1,6 +1,6 @@
 # GitHub 공유와 배포
 
-공식 공개 저장소는 [xoxo787/clearwrite](https://github.com/xoxo787/clearwrite)이며, Windows 배포 파일은 [v0.3.0 베타 릴리스](https://github.com/xoxo787/clearwrite/releases/tag/v0.3.0)에서 받습니다. PyPI에는 등록하지 않았습니다. 사용자의 토큰·비공개 글은 패키지에 넣지 않습니다.
+공식 공개 저장소는 [xoxo787/clearwrite](https://github.com/xoxo787/clearwrite)이며, Windows 배포 파일은 [v0.3.1 베타 릴리스](https://github.com/xoxo787/clearwrite/releases/tag/v0.3.1)에서 받습니다. PyPI에는 등록하지 않았습니다. 사용자의 토큰·비공개 글은 패키지에 넣지 않습니다.
 
 ## 공개 전
 

@@ -1,8 +1,11 @@
 """Offline CLI protocol fixture. Never calls a model or external service."""
 import json
-from pathlib import Path
 import sys
 import time
+
+if '--fixture-pipe-pressure' in sys.argv:
+    print('x' * 500_000, file=sys.stderr, flush=True)
+    print(json.dumps({'type': 'thread.started', 'padding': 'x' * 500_000}), flush=True)
 
 task = json.load(sys.stdin)
 scenario = task.get('voice_sample', '')
@@ -21,9 +24,18 @@ if 'candidate_sha256' in task:
     proposal = {'source_sha256': task['source_sha256'], 'candidate_sha256': task['candidate_sha256'],
                 'before': assess(task['text']),
                 'after': assess(task['candidate']) if task['candidate'] is not None else None}
-if '--output-last-message' in sys.argv:
-    path = Path(sys.argv[sys.argv.index('--output-last-message') + 1])
-    path.write_text('x' * 2_000_001 if scenario == 'oversize' else
-                    ('not json' if scenario == 'malformed' else json.dumps(proposal)), encoding='utf-8')
+if scenario == 'oversize':
+    print('x' * 2_000_001)
+elif scenario == 'oversize-stderr':
+    print('x' * 2_000_001, file=sys.stderr)
+elif scenario == 'malformed':
+    print('not json')
+elif 'exec' in sys.argv:
+    print(json.dumps({'type': 'thread.started', 'thread_id': 'offline-fixture'}))
+    print(json.dumps({'type': 'item.completed', 'item': {
+        'id': 'item_1', 'type': 'reasoning', 'text': 'Offline fixture, not a model.'}}))
+    print(json.dumps({'type': 'item.completed', 'item': {
+        'id': 'item_2', 'type': 'agent_message', 'text': json.dumps(proposal)}}))
+    print(json.dumps({'type': 'turn.completed', 'usage': {}}))
 else:
     print(json.dumps({'structured_output': proposal, 'is_error': False}))
