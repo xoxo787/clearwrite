@@ -7,7 +7,7 @@ description: >-
   edit source code, fabricate facts, or silently rewrite every response.
 license: MIT
 metadata:
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 # ClearWrite · 맑은글

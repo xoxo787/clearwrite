@@ -174,7 +174,7 @@ class ModelAdapterTests(unittest.TestCase):
 
     def test_malformed_and_oversize_outputs(self):
         with patch('clearwrite.model_cli.cli_info', return_value=self.info):
-            for scenario in ('malformed', 'oversize'):
+            for scenario in ('malformed', 'oversize', 'oversize-stderr'):
                 with self.subTest(scenario=scenario), self.assertRaises(ProviderError):
                     model_plan(TEXT, backend='codex', allow_model=True, voice=scenario, timeout=4)
 
@@ -210,8 +210,12 @@ class JobTests(unittest.TestCase):
         with self.assertRaises(BusyError):
             manager.start(task)
         manager.cancel(identifier)
-        manager.close()
+        deadline = time.monotonic() + 3
+        while manager.get(identifier)['state'] == 'running' and time.monotonic() < deadline:
+            time.sleep(.01)
         self.assertEqual(manager.get(identifier)['state'], 'cancelled')
+        manager.close()
+        self.assertIsNone(manager.get(identifier))
         self.assertIsNone(manager.get('missing'))
 
 
