@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0",
+  "status": "edited",
+  "text": "파이썬 프로젝트를 진행하다 보면 서로 다른 라이브러리 버전이 필요한 상황을 만나게 됩니다. 예를 들어 프로젝트 A는 버전 1.0을 사용하고, 프로젝트 B는 버전 2.0을 사용한다고 가정해 보겠습니다. 같은 환경에 한 버전만 설치하면 다른 프로젝트가 실행되지 않을 수 있습니다.\n\n이 문제는 프로젝트마다 가상 환경을 만들어 해결합니다. 별도의 디렉터리를 사용해 각 프로젝트의 파이썬과 추가 패키지를 관리합니다. 한쪽 패키지를 바꾸더라도 다른 환경의 패키지는 그대로 남습니다. 다만 가상 환경을 만드는 일과 프로젝트의 모든 동작을 검증하는 일은 구분해야 합니다.\n\n이때 가상 환경은 서로 충돌하는 의존성을 프로젝트별로 분리하고 관리하는 데 중요한 역할을 합니다. 어떤 환경에서 설치하고 실행하는지 확인하는 습관도 함께 필요합니다.",
+  "proposed_plan": {
+    "schema_version": "1.0",
+    "source_sha256": "7cd53c89c67a79e70eef7cd5101c190c0ca2a59981cff33f0503fe09ca4c51fe",
+    "edits": [
+      {
+        "start": 156,
+        "end": 198,
+        "original": "이와 같은 문제를 해결하는 방법은 프로젝트마다 가상 환경을 만드는 것입니다.",
+        "replacement": "이 문제는 프로젝트마다 가상 환경을 만들어 해결합니다.",
+        "reason": "겹친 서술을 직접적인 동작으로 바꿈",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 199,
+        "end": 213,
+        "original": "별도의 디렉터리를 사용하여",
+        "replacement": "별도의 디렉터리를 사용해",
+        "reason": "연결 표현을 줄임",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 327,
+        "end": 379,
+        "original": "이러한 맥락에서 가상 환경은 서로 충돌하는 의존성을 분리한다는 점에서 중요한 의미를 가집니다.",
+        "replacement": "이때 가상 환경은 서로 충돌하는 의존성을 프로젝트별로 분리하고 관리하는 데 중요한 역할을 합니다.",
+        "reason": "중요성을 과하게 축약하지 않고 구체적인 역할과 프로젝트별 관리 맥락을 유지",
+        "rule": "editorial-context"
+      }
+    ]
+  },
+  "applied_edits": [
+    {
+      "start": 156,
+      "end": 198,
+      "original": "이와 같은 문제를 해결하는 방법은 프로젝트마다 가상 환경을 만드는 것입니다.",
+      "replacement": "이 문제는 프로젝트마다 가상 환경을 만들어 해결합니다.",
+      "reason": "겹친 서술을 직접적인 동작으로 바꿈",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 199,
+      "end": 213,
+      "original": "별도의 디렉터리를 사용하여",
+      "replacement": "별도의 디렉터리를 사용해",
+      "reason": "연결 표현을 줄임",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 327,
+      "end": 379,
+      "original": "이러한 맥락에서 가상 환경은 서로 충돌하는 의존성을 분리한다는 점에서 중요한 의미를 가집니다.",
+      "replacement": "이때 가상 환경은 서로 충돌하는 의존성을 프로젝트별로 분리하고 관리하는 데 중요한 역할을 합니다.",
+      "reason": "중요성을 과하게 축약하지 않고 구체적인 역할과 프로젝트별 관리 맥락을 유지",
+      "rule": "editorial-context"
+    }
+  ],
+  "rejected_edits": [],
+  "verification": {
+    "passed": true,
+    "failures": [],
+    "warnings": [
+      "검사 통과는 의미·사실 보존의 증명이 아닙니다. 주체, 인과, 예외를 최종 대조하세요."
+    ],
+    "character_change_rate": 0.074119,
+    "change_rate_method": "SequenceMatcher; autojunk for >4000 chars",
+    "visible_characters_before": 320,
+    "visible_characters_after": 311,
+    "visible_length_ratio": 0.971875,
+    "required_length_ratio": 0.85,
+    "length_policy": "Whitespace-excluded characters, heuristic; not semantic validation",
+    "numbers_before": [
+      "1.0",
+      "2.0"
+    ],
+    "numbers_after": [
+      "1.0",
+      "2.0"
+    ],
+    "semantic_equivalence": "not_established",
+    "original_sha256": "7cd53c89c67a79e70eef7cd5101c190c0ca2a59981cff33f0503fe09ca4c51fe",
+    "candidate_sha256": "ed4dd30c442d38e0850973cb665024ba951ee761b297835c1b3d243b0a93d960"
+  },
+  "before": {
+    "schema_version": "1.0",
+    "language": "ko",
+    "input_sha256": "7cd53c89c67a79e70eef7cd5101c190c0ca2a59981cff33f0503fe09ca4c51fe",
+    "authorship": "undetermined",
+    "ai_probability": null,
+    "ai_style_score": 24.0,
+    "reading_burden_proxy": 10.8,
+    "score_label": "규칙 기반 편집 후보 밀도 (0–100)",
+    "metrics": {
+      "characters": 417,
+      "prose_tokens": 100,
+      "sentence_segments": 9,
+      "mean_tokens_per_segment": 11.11,
+      "long_segment_share": 0.0,
+      "repeated_opening_share": 0.0,
+      "markers_per_100_tokens": 3.0,
+      "protected_spans": 0
+    },
+    "findings": [
+      {
+        "rule": "KO01",
+        "category": "wordiness",
+        "start": 156,
+        "end": 161,
+        "text": "이와 같은",
+        "message": "짧은 지시 표현을 검토하세요.",
+        "auto_editable": true,
+        "weight": 1,
+        "source": "im-not-ai:T6"
+      },
+      {
+        "rule": "KO03",
+        "category": "wordiness",
+        "start": 209,
+        "end": 213,
+        "text": "사용하여",
+        "message": "연결 표현을 간단히 할 수 있습니다.",
+        "auto_editable": true,
+        "weight": 1,
+        "source": "im-not-ai:T6"
+      },
+      {
+        "rule": "KO12",
+        "category": "abstract_reference",
+        "start": 327,
+        "end": 333,
+        "text": "이러한 맥락",
+        "message": "지시 대상이 분명한지 확인하세요.",
+        "auto_editable": false,
+        "weight": 1,
+        "source": "clearwrite"
+      }
+    ],
+    "warnings": [],
+    "disclaimer": "문체 점수는 AI 작성 확률이나 인지 피로의 실측값이 아닙니다. 작성 주체는 판정하지 않습니다."
+  },
+  "after": {
+    "schema_version": "1.0",
+    "language": "ko",
+    "input_sha256": "ed4dd30c442d38e0850973cb665024ba951ee761b297835c1b3d243b0a93d960",
+    "authorship": "undetermined",
+    "ai_probability": null,
+    "ai_style_score": 0.0,
+    "reading_burden_proxy": 0.0,
+    "score_label": "규칙 기반 편집 후보 밀도 (0–100)",
+    "metrics": {
+      "characters": 406,
+      "prose_tokens": 98,
+      "sentence_segments": 9,
+      "mean_tokens_per_segment": 10.89,
+      "long_segment_share": 0.0,
+      "repeated_opening_share": 0.0,
+      "markers_per_100_tokens": 0.0,
+      "protected_spans": 0
+    },
+    "findings": [],
+    "warnings": [],
+    "disclaimer": "문체 점수는 AI 작성 확률이나 인지 피로의 실측값이 아닙니다. 작성 주체는 판정하지 않습니다."
+  },
+  "disclaimer": "문체 점수는 AI 작성 확률이나 인지 피로의 실측값이 아닙니다. 작성 주체는 판정하지 않습니다.",
+  "backend": "supplied-plan"
+}

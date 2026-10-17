@@ -1,0 +1,6 @@
+interface:
+  display_name: "ClearWrite · 맑은글"
+  short_description: "한국어·영어 최소 윤문과 전후 문체·보존 검사"
+  default_prompt: "$clearwrite 이 글을 요약하지 말고 정보와 설명 깊이를 유지하면서 읽기 편하게 다듬고 검수해 줘."
+policy:
+  allow_implicit_invocation: false

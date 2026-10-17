@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="clearwrite-token" content="__TOKEN__"><title>ClearWrite · 맑은글</title>
+<style nonce="__NONCE__">__STYLE__</style></head>
+<body><div class="app-shell">
+<header class="app-header"><div class="brand"><span class="brand-mark" aria-hidden="true">맑</span><div><h1>맑은글 <span>ClearWrite</span></h1><p>고친 곳을 보고, 이유를 읽고, 내 글로 남기세요.</p></div></div><div class="header-actions"><span class="local-badge">내 PC에서 실행 중</span><button id="shutdown" class="quiet">앱 종료</button></div></header>
+<main>
+<section class="toolbar" aria-label="윤문 설정">
+<label class="field">윤문·분석 모델<select id="backend"><option value="codex">Codex</option><option value="claude">Claude Code</option></select></label>
+<label class="field">편집 기준<select id="mode"><option value="personal">자연스럽게</option><option value="publish">필자의 말투 유지</option><option value="technical">기술 문서</option><option value="preserve">원문 보존</option></select></label>
+<details class="model-setting"><summary>모델 지정</summary><label class="field">모델 이름 <input id="model" maxlength="120" placeholder="비우면 CLI 기본 모델" aria-label="모델 이름"></label></details>
+<span id="connection" class="connection" role="status">모델 연결을 확인하고 있습니다…</span>
+<button id="example" class="secondary">예시 체험</button>
+</section>
+<div id="permission" class="permission"><label class="check"><input id="model-consent" type="checkbox"><span>선택한 모델 서비스로 분석·윤문할 원문과 수정본을 전송하는 데 동의합니다.</span></label><p>설치된 CLI의 로그인을 사용하며, 현재 채팅과 별도의 새 요청입니다. 윤문과 AI 문체 분석은 각각 실행하며, 글은 OpenAI 또는 Anthropic 서버에서 처리되고 계정 사용량이 소모됩니다.</p></div>
+<div class="workbar"><div><span class="step-label">01 / 글 다듬기</span><span id="demo-badge" class="demo-badge" hidden>예시 · 저장된 편집안 · 모델 요청 없음</span></div><div class="run-actions"><button id="analyze" class="quiet">로컬 규칙 분석</button><button id="cancel" class="secondary" hidden>요청 취소</button><button id="rewrite" class="primary" disabled>윤문하기 <span aria-hidden="true">↗</span></button></div></div>
+<p id="status" class="status" role="status" aria-live="polite">글을 붙여 넣거나 예시를 열어 시작하세요.</p>
+<section class="workspace" aria-label="원문과 수정본 비교">
+<section class="pane input-pane" aria-labelledby="input-title"><div class="pane-head"><h2 id="input-title">원문 <span id="input-count">0자</span></h2><button id="edit-toggle" class="small quiet" hidden>원문 편집</button></div><label class="sr-only" for="input">원문</label><textarea id="input" maxlength="12000" placeholder="여기에 글을 붙여 넣으세요.\n최대 12,000자까지 다듬을 수 있습니다." spellcheck="false"></textarea><div id="original-diff" class="prose" role="region" aria-label="원문 변경 표시" hidden></div><div class="pane-foot"><span>원본은 결과와 별도로 유지됩니다.</span></div></section>
+<section class="pane result-pane" aria-labelledby="result-title"><div class="pane-head"><h2 id="result-title">수정본 <span id="result-count">—</span></h2><div class="inline-actions"><button id="copy" class="small quiet" disabled>복사</button><button id="save-text" class="small quiet" disabled>저장</button></div></div><div id="result" class="prose" role="region" aria-label="수정본"><div class="empty-state"><span class="paper-lines" aria-hidden="true">≋</span><p>다듬은 글이 여기에 표시됩니다.</p><small>바뀐 구간을 선택하면 수정 이유를 볼 수 있어요.</small></div></div><div class="pane-foot legend"><span><i class="swatch added"></i>추가·수정</span><span><i class="swatch removed"></i>삭제·기존 표현</span></div></section>
+<aside class="changes-pane" aria-labelledby="changes-title"><div class="pane-head"><h2 id="changes-title">어떻게, 왜? <span id="change-count">0곳</span></h2><div class="inline-actions"><button id="previous-change" class="small quiet arrow" aria-label="이전 수정" disabled>↑</button><button id="next-change" class="small quiet arrow" aria-label="다음 수정" disabled>↓</button></div></div><div id="changes" class="changes-list"><p class="empty-reasons">수정 이유가 여기에 쌓입니다.<br>필요한 수정인지 하나씩 살펴보세요.</p></div></aside>
+</section>
+<div class="verification-strip"><p id="verification">숫자·인용·변경량을 적용 전에 검사합니다.</p><button id="save-report" class="quiet" disabled title="원문과 수정본이 포함된 JSON을 저장합니다">검수 기록 저장</button></div>
+<section class="style-review" aria-labelledby="style-title">
+<div class="style-heading"><div><span class="step-label">02 / 문체 살펴보기</span><h2 id="style-title">AI 문체 점수와 판단 이유</h2><p>위에서 선택한 모델로 분석합니다. 높은 점수는 반복·상투적 표현 등 문체 특징이 두드러진다는 뜻입니다.</p></div><button id="style-analyze" class="secondary" disabled>AI 문체 분석</button></div>
+<p id="style-status" class="style-status" role="status" aria-live="polite">모델 분석 전 · 원문만 넣어도 분석할 수 있습니다.</p>
+<div class="style-metrics">
+<article class="style-card" aria-label="원문 문체 평가"><h3>원문 문체</h3><strong id="ai-before">미분석</strong><span class="score-scale"> / 100 · 모델 추정</span><p id="ai-before-detail">분석 후 판단 근거가 표시됩니다.</p><div id="style-before-reasons" class="style-reasons"></div></article>
+<article class="style-card" aria-label="수정본 문체 평가"><h3>수정본 문체</h3><strong id="ai-after">미분석</strong><span class="score-scale"> / 100 · 모델 추정</span><p id="ai-after-detail">윤문 후 원문과 함께 분석할 수 있습니다.</p><div id="style-after-reasons" class="style-reasons"></div></article>
+<article class="style-card change-metric" aria-label="실제 수정 비율"><h3>실제 수정 비율</h3><strong id="change-rate">—</strong><p id="change-rate-detail">윤문 결과가 나오면 글자 차이로 계산합니다.</p><small>공백 포함 · (삭제·교체된 원문 글자 + 추가·대체된 글자) ÷ (원문 + 수정본 글자 수)</small></article>
+</div><p class="style-note">문체 점수는 검증되지 않은 참고용 평가이며 AI 작성 확률·작성률이나 저자 판정이 아닙니다. 네 항목별 0~25점을 합산합니다. 실제 수정 비율은 이번 윤문의 변경량으로, 기존 글의 AI 작성 여부를 뜻하지 않습니다.</p>
+</section>
+<details class="analysis-details"><summary>문체 분석과 보존 검사 자세히 보기</summary><p id="analysis-summary">문체 분석만 실행하면 모델 요청 없이 로컬 규칙으로 편집 후보를 확인합니다.</p><pre id="details"></pre></details>
+</main><footer><span>ClearWrite __VERSION__</span><span>윤문은 요약이 아닙니다. 마지막 판단은 필자의 몫입니다.</span></footer>
+</div><script nonce="__NONCE__">__SCRIPT__</script></body></html>

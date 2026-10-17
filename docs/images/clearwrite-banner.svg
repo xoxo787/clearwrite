@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+<title id="title">ClearWrite · 맑은글</title><desc id="desc">고친 곳을 보고, 이유를 읽고, 내 글로 남기세요. 원문, 형광펜 비교, 수정 이유를 연결하는 윤문 도구.</desc>
+<rect width="1200" height="300" rx="24" fill="#f5f4ed"/>
+<rect x="36" y="40" width="78" height="78" rx="20" fill="#285d4c"/>
+<text x="75" y="91" text-anchor="middle" fill="#fffce7" font-size="42" font-weight="700" font-family="Segoe UI,Malgun Gothic,sans-serif">맑</text>
+<text x="138" y="75" fill="#285d4c" font-size="22" font-family="Segoe UI,Malgun Gothic,sans-serif">맑은글</text>
+<text x="135" y="126" fill="#203d33" font-size="54" font-weight="700" letter-spacing="-2" font-family="Segoe UI,sans-serif">ClearWrite</text>
+<text x="38" y="182" fill="#36483e" font-size="24" font-family="Segoe UI,Malgun Gothic,sans-serif">고친 곳을 보고, 이유를 읽고, 내 글로 남기세요.</text>
+<text x="38" y="226" fill="#68766b" font-size="15" font-family="Segoe UI,Malgun Gothic,sans-serif">Korean · English  /  Codex · Claude Code  /  Windows beta</text>
+<g font-family="Segoe UI,Malgun Gothic,sans-serif">
+<rect x="755" y="49" width="385" height="190" rx="16" fill="#fffef8" stroke="#d8dfd3"/>
+<text x="782" y="85" font-size="14" fill="#6b7569">원문에서 수정 이유까지</text>
+<rect x="782" y="105" width="326" height="31" rx="5" fill="#fff0a5"/>
+<text x="795" y="127" font-size="17" fill="#2d4036">바뀐 표현을 선택하세요.</text>
+<path d="M798 155h291 M798 171h224" stroke="#c8d1c2" stroke-width="3" stroke-linecap="round"/>
+<circle cx="800" cy="208" r="10" fill="#e1e9dd"/>
+<text x="820" y="214" font-size="15" fill="#285d4c">어디를 · 어떻게 · 왜?</text>
+</g></svg>

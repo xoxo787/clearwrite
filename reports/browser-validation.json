@@ -1,0 +1,31 @@
+{
+  "engine": "144.0.7559.96",
+  "browser": "Chromium via Playwright; DOM + in-process engine bridge",
+  "checks": [
+    {
+      "name": "analyze_button",
+      "passed": true
+    },
+    {
+      "name": "rewrite_button",
+      "passed": true,
+      "status": "수정 2곳. 의미와 사실을 마지막으로 대조하세요."
+    },
+    {
+      "name": "download_report_button",
+      "passed": true
+    },
+    {
+      "name": "preserve_mode",
+      "passed": true
+    },
+    {
+      "name": "source_html_not_executed",
+      "passed": true
+    }
+  ],
+  "javascript_errors": [],
+  "external_http_used": false,
+  "browser_http_e2e": "not_run: loopback navigation blocked by environment administrator policy",
+  "http_boundaries": "separately tested with real socket requests in unittest"
+}
