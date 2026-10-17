@@ -1,0 +1,19 @@
+{
+  "generator": "ChatGPT assistant in the development conversation",
+  "date": "2026-10-17",
+  "model_identifier_from_api": null,
+  "seed": null,
+  "api_call_log": null,
+  "generation_brief": "Generate new Korean and English prose on topics parallel to the web reference excerpts. Include plain writing as well as some verbose writing. Keep four deliberate stress fixtures separate. Fictional scenes are invented, not personal testimony.",
+  "not_a_preregistered_or_blinded_experiment": true,
+  "editorial_brief": "Keep facts, qualifiers, voice and protected spans. Remove unnecessary staging and wordiness only where useful. Unchanged is a valid decision.",
+  "fixed_rules_before_corpus": true,
+  "later_changes": "Only bug fixes and guard improvements; no accuracy-threshold fitting.",
+  "limitations": [
+    "Single assistant generated AI texts and editorial proposals.",
+    "No independent reader ratings.",
+    "Reference documents differ in age, length and genre.",
+    "Contemporary documentation provenance is not cryptographically certified.",
+    "No detector training or held-out accuracy estimate."
+  ]
+}

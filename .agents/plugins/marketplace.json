@@ -1,0 +1,17 @@
+{
+  "name": "clearwrite-local",
+  "plugins": [
+    {
+      "name": "clearwrite",
+      "source": {
+        "source": "local",
+        "path": "./plugins/clearwrite"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

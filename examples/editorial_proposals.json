@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "source_sha256": "7cd53c89c67a79e70eef7cd5101c190c0ca2a59981cff33f0503fe09ca4c51fe",
+  "edits": [
+    {
+      "original": "이와 같은 문제를 해결하는 방법은 프로젝트마다 가상 환경을 만드는 것입니다.",
+      "replacement": "이 문제는 프로젝트마다 가상 환경을 만들어 해결합니다.",
+      "reason": "겹친 서술을 직접적인 동작으로 바꿈",
+      "rule": "editorial-context"
+    },
+    {
+      "original": "별도의 디렉터리를 사용하여",
+      "replacement": "별도의 디렉터리를 사용해",
+      "reason": "연결 표현을 줄임",
+      "rule": "editorial-context"
+    },
+    {
+      "original": "이러한 맥락에서 가상 환경은 서로 충돌하는 의존성을 분리한다는 점에서 중요한 의미를 가집니다.",
+      "replacement": "이때 가상 환경은 서로 충돌하는 의존성을 프로젝트별로 분리하고 관리하는 데 중요한 역할을 합니다.",
+      "reason": "중요성을 과하게 축약하지 않고 구체적인 역할과 프로젝트별 관리 맥락을 유지",
+      "rule": "editorial-context"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clearwrite-toolkit"
+version = "0.3.0"
+description = "Minimal Korean/English prose editing, honest style diagnostics, and guarded model patches"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [{name = "ClearWrite contributors"}]
+dependencies = []
+keywords = ["korean", "editing", "readability", "codex", "skill"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent",
+  "Topic :: Text Processing :: Linguistic",
+]
+
+[project.scripts]
+clearwrite = "clearwrite.cli:main"
+
+[project.gui-scripts]
+clearwrite-desktop = "clearwrite.desktop:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+license-files = ["LICENSE", "licenses/*.txt"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+clearwrite = ["web/*.html", "web/*.css", "web/*.js"]

@@ -1,0 +1,40 @@
+{
+  "executed_at_utc": "2026-10-17T12:20:20.089038+00:00",
+  "python": "3.13.5",
+  "os": "Linux",
+  "tests": {
+    "run": 165,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 12.546,
+    "passed": true
+  },
+  "live_models": {
+    "codex": "not_run",
+    "ollama": "not_run"
+  },
+  "external_detector": "not_run_by_this_command",
+  "wheel": {
+    "status": "installed_and_cli_smoke_passed",
+    "file": "clearwrite_toolkit-0.1.1-py3-none-any.whl",
+    "sha256": "22225cebdf95699a042e03bcbcfda6738f7d54db1b28c79db77b4a97ecfbcccb",
+    "offline": true,
+    "clean_venv": true
+  },
+  "semantic_equivalence": "not_established",
+  "reader_experiment": {
+    "participants": 0,
+    "status": "not_run"
+  },
+  "source_hashes": {
+    "__init__.py": "0a1da082082b547a4a57254ecc4d11be6933f6f6d2420352dcfe77f6ea35cdd8",
+    "__main__.py": "79ee6f134c5c5193377cf9b189cbdcc3e2095e49ba9cec310114441c15a917c4",
+    "cli.py": "d85ca2bf85c1dab9af25a8f0e392f24f31f4dec6af4b50e7f7490489f2cdf785",
+    "core.py": "8907a4676965aea56cd3c69bd0a800c1e0991a5c3d857c91ffdb6f724b6509b1",
+    "io.py": "7c3000b2f7775087f49ea677a0c3f9990889161127df07f43c8e7da3f9114063",
+    "providers.py": "a095de3edea7dd775570ea08221c0fd930fe8e59bae3a06d3fa83b06582ef409",
+    "ui.py": "3635763a9dc8615b4e1c44f4487ca04b43a2a46dc66311432bd5936f36172b52",
+    "upstream_compat.py": "9d6ea6250cb76b089f1033dc2a9ea4a376096c873339898a1273371256ee859e"
+  }
+}

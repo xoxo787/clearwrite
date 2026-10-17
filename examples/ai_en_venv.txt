@@ -1,0 +1,5 @@
+At its core, a virtual environment gives a Python project its own place to keep packages. Suppose project A needs version 1.0 of a library while project B needs version 2.0. Installing a single version into a shared environment may leave one project unable to run.
+
+You can create a separate environment for each project in order to keep those requirements apart. You then install each project's packages into its own environment. Changing the library in one environment does not replace the copy in the other. This separation makes package management easier to reason about, although it does not prove that either application works correctly.
+
+It is important to note that the environment used to run a program must be the environment where its dependencies were installed. Check the selected interpreter when a package seems to be missing. A virtual environment addresses dependency separation, not every possible source of a failed program.

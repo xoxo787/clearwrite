@@ -1,0 +1,20 @@
+[
+  {
+    "item": 1,
+    "source_id": "ai_ko_spring",
+    "A": "edited",
+    "B": "original"
+  },
+  {
+    "item": 2,
+    "source_id": "ai_ko_venv",
+    "A": "original",
+    "B": "edited"
+  },
+  {
+    "item": 3,
+    "source_id": "ai_ko_rain",
+    "A": "original",
+    "B": "edited"
+  }
+]
