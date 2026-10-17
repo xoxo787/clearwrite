@@ -144,7 +144,10 @@ class UITests(unittest.TestCase):
         for data in [{'action':'rewrite','text':TEXT,'mode':[]},{'action':'analyze','text':[]},{'action':'execute','text':TEXT},{'action':'analyze','text':TEXT,'secret':'x'}]:
             with self.subTest(data=data):self.assertEqual(self.request('POST','/api/process',data)[0],400)
     def test_json_invalid(self):self.assertEqual(self.request('POST','/api/process','{"bad":')[0],400)
-    def test_big_request(self):self.assertEqual(self.request('POST','/api/process','a'*100001)[0],413)
+    def test_big_request(self):
+        # The declared size is rejected before reading a body. Sending that
+        # body concurrently can reset the socket on Windows after rejection.
+        self.assertEqual(self.request('POST','/api/process',headers={'Content-Length':'100001'})[0],413)
     def test_preserve_skips_ollama(self):
         s,h,b=self.request('POST','/api/process',{'action':'rewrite','text':TEXT,'mode':'preserve','backend':'ollama'});self.assertEqual(s,200);self.assertEqual(json.loads(b)['text'],TEXT)
     def test_html_is_data(self):

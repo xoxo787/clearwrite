@@ -1,6 +1,6 @@
 # GitHub 공유와 배포
 
-원본 ZIP은 새 저장소로 공개할 수 있는 구조입니다. GitHub/PyPI 공개가 완료되었다는 뜻은 아닙니다. 사용자의 계정명·토큰·비공개 글을 패키지에 넣지 않습니다.
+공식 공개 저장소는 [xoxo787/clearwrite](https://github.com/xoxo787/clearwrite)이며, Windows 배포 파일은 [v0.3.0 베타 릴리스](https://github.com/xoxo787/clearwrite/releases/tag/v0.3.0)에서 받습니다. PyPI에는 등록하지 않았습니다. 사용자의 토큰·비공개 글은 패키지에 넣지 않습니다.
 
 ## 공개 전
 

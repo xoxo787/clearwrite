@@ -63,7 +63,7 @@ Use `--backend claude` or `--provider claude` for Claude Code. The default CLI r
 
 ## Verification and development
 
-Windows x64 EXE startup, single-instance reuse and shutdown were tested. Codex CLI 0.147.0 was called for real rewriting and style assessment. Claude Code has offline subprocess/response contract tests but no live call in the release environment. The recorded Windows/Python 3.13.14 suite ran 211 tests: 209 passed, 2 symlink-related skips. Browser QA covered linked navigation, scores/reasons, downloads, failures, cancellation, stale inputs and responsive layouts. A local wheel was installed in a clean environment without network downloads.
+Windows x64 EXE startup, single-instance reuse and shutdown were tested. Codex CLI 0.147.0 was called for real rewriting and style assessment. Claude Code has offline subprocess/response contract tests but no live call in the release environment. GitHub Actions passed all 12 combinations of Ubuntu, Windows and macOS with Python 3.10–3.13. The recorded Windows/Python 3.13.14 suite ran 212 tests: 210 passed, 2 symlink-related skips. Browser QA covered linked navigation, scores/reasons, downloads, failures, cancellation, stale inputs and responsive layouts. A local wheel was installed in a clean environment without network downloads.
 
 These checks do not validate authorship detection, reader cognition or universal semantic preservation. Current CI results are available in [Actions](https://github.com/xoxo787/clearwrite/actions).
 

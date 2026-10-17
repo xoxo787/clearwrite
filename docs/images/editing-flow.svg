@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="156" viewBox="0 0 1200 156" role="img" aria-labelledby="title desc">
+<title id="title">ClearWrite의 편집 과정</title>
+<desc id="desc">원문을 보관하고 선택한 모델이 제안한 편집을 검사한 뒤, 허용된 수정을 적용하고 형광펜 비교와 이유를 표시합니다.</desc>
+<rect width="1200" height="156" rx="20" fill="#f5f4ed"/>
+<g font-family="Segoe UI,Malgun Gothic,sans-serif" text-anchor="middle">
+<g fill="#fffef8" stroke="#d8dfd3"><rect x="24" y="30" width="196" height="96" rx="12"/><rect x="263" y="30" width="196" height="96" rx="12"/><rect x="502" y="30" width="196" height="96" rx="12"/><rect x="741" y="30" width="196" height="96" rx="12"/></g>
+<rect x="980" y="30" width="196" height="96" rx="12" fill="#285d4c"/>
+<g fill="#285d4c" font-size="20" font-weight="600"><text x="122" y="72">원문 보관</text><text x="361" y="72">모델의 편집 제안</text><text x="600" y="72">보존 기준 검사</text><text x="839" y="72">허용된 수정 적용</text></g>
+<g fill="#68766b" font-size="14"><text x="122" y="100">필자의 글에서 출발</text><text x="361" y="100">선택한 Codex · Claude</text><text x="600" y="100">위치 · 숫자 · 인용 · 분량</text><text x="839" y="100">실제 글자 차이 계산</text></g>
+<text x="1078" y="72" fill="#fffce7" font-size="20" font-weight="600">비교하고 판단하기</text><text x="1078" y="100" fill="#e6eedc" font-size="14">형광펜 · 수정 이유</text>
+</g>
+<path d="M232 78h18m-6-6 6 6-6 6 M471 78h18m-6-6 6 6-6 6 M710 78h18m-6-6 6 6-6 6 M949 78h18m-6-6 6 6-6 6" fill="none" stroke="#8b9a83" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
