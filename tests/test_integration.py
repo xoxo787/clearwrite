@@ -174,7 +174,9 @@ class BundleInstallTests(unittest.TestCase):
         p=self.home/'.agents/plugins/marketplace.json';p.parent.mkdir(parents=True);p.write_text(json.dumps({'name':'mine','plugins':[{'name':'other','source':{'source':'local','path':'./other'}}]}))
         INSTALL.install(kind='plugin',home=self.home,apply=True);j=json.loads(p.read_text());self.assertEqual(j['name'],'mine');self.assertEqual(j['plugins'][0]['name'],'other');self.assertEqual(len(j['plugins']),2)
     def test_project_paths(self):
-        r=INSTALL.install(kind='plugin',project=self.home,apply=True);self.assertEqual(r['destination'],str(self.home/'plugins/clearwrite'))
+        r=INSTALL.install(kind='plugin',project=self.home,apply=True)
+        # Windows short names and macOS /var aliases identify the same folder.
+        self.assertTrue(Path(r['destination']).samefile(self.home/'plugins/clearwrite'))
     def test_catalog_collision_rejected(self):
         p=self.home/'.agents/plugins/marketplace.json';p.parent.mkdir(parents=True);p.write_text(json.dumps({'name':'x','plugins':[{'name':'clearwrite','source':{'source':'local','path':'./other'}}]}))
         with self.assertRaises(ValueError):INSTALL.install(kind='plugin',home=self.home,apply=True)

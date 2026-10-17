@@ -59,11 +59,14 @@ class DesktopTests(unittest.TestCase):
             flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0) if os.name == 'nt' else 0
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
             try:
-                deadline = time.monotonic()+8
+                # Hosted runners can start a cold Python process slowly.
+                deadline = time.monotonic()+30
                 while time.monotonic()<deadline and not (directory / 'instance.json').is_file():
                     if process.poll() is not None:
                         self.fail(process.communicate()[1].decode('utf-8', errors='replace'))
                     time.sleep(.04)
+                self.assertTrue((directory / 'instance.json').is_file(),
+                                'Desktop startup did not write metadata within 30 seconds')
                 metadata = json.loads((directory / 'instance.json').read_text(encoding='utf-8'))
                 self.assertIsNotNone(existing(directory))
                 second = subprocess.run(command, capture_output=True, timeout=15, creationflags=flags)
