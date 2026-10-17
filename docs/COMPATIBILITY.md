@@ -2,7 +2,7 @@
 
 기준일 2026-10-17. 규격에 맞춘 구현, 모의 응답 테스트, 실제 호스트 실행을 구분합니다.
 
-**0.3.0 릴리스 확인:** Windows x64 / Python 3.13.14에서 자동 검사 211개(통과 209, 심볼릭 링크 권한에 따른 생략 2), Windows portable EXE, 새 wheel 설치, 실제 브라우저 동작을 확인했습니다. Codex CLI 0.147.0으로 실제 윤문과 문체 분석을 실행했습니다. Claude Code는 해당 CLI가 없어 모의 프로세스 계약만 검사했습니다. CI의 현재 상태는 [GitHub Actions](https://github.com/xoxo787/clearwrite/actions)에서 확인하세요.
+**0.3.0 릴리스 확인:** Windows x64 / Python 3.13.14에서 자동 검사 212개(통과 210, 심볼릭 링크 권한에 따른 생략 2), Windows portable EXE, 새 wheel 설치, 실제 브라우저 동작을 확인했습니다. Codex CLI 0.147.0으로 실제 윤문과 문체 분석을 실행했습니다. Claude Code는 해당 CLI가 없어 모의 프로세스 계약만 검사했습니다. CI의 현재 상태는 [GitHub Actions](https://github.com/xoxo787/clearwrite/actions)에서 확인하세요.
 
 | 환경 | 제공 형태 | 실제 확인 범위 | 필요한 것 |
 |---|---|---|---|
