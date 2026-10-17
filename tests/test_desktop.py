@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 from clearwrite.core import InputError, text_hash
 from clearwrite.desktop import _request, existing
+from clearwrite.ui import Server
 
 
 class CLIPipeTests(unittest.TestCase):
@@ -40,6 +41,13 @@ class CLIPipeTests(unittest.TestCase):
 
 
 class DesktopTests(unittest.TestCase):
+    def test_loopback_startup_needs_no_reverse_dns(self):
+        with patch('socket.getfqdn', side_effect=AssertionError('Unexpected reverse DNS')):
+            with Server(0) as server:
+                self.assertEqual(server.server_address[0], '127.0.0.1')
+                self.assertTrue(server.server_port > 0)
+                self.assertEqual(server.origin, f'http://127.0.0.1:{server.server_port}')
+
     def test_instance_metadata_never_redirects_to_an_external_host(self):
         with patch('clearwrite.desktop.urllib.request.build_opener') as network:
             with self.assertRaises(InputError):

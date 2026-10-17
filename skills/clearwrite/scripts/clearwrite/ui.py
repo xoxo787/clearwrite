@@ -8,6 +8,7 @@ import secrets
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
 from typing import Any
 from . import __version__
 from .comparison import comparison
@@ -73,6 +74,11 @@ class Server(ThreadingHTTPServer):
         self.instance_id = secrets.token_urlsafe(18)
         super().__init__(('127.0.0.1', port), Handler)
         self.origin = f'http://127.0.0.1:{self.server_port}'
+    def server_bind(self) -> None:
+        # This editor only serves loopback. HTTPServer's reverse-DNS lookup is
+        # unnecessary and can delay startup on hosts with a slow resolver.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
     def server_close(self) -> None:
         self.jobs.close()
         super().server_close()
