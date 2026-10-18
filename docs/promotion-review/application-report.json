@@ -1,0 +1,1115 @@
+{
+  "schema_version": "1.0",
+  "status": "edited",
+  "text": "**여러분, 아직도 AI가 써준 글을 그대로 붙여넣고 계신가요?**\n\n겉으로는 매끄러워도 같은 말이 되풀이되는 글이 있습니다. 설명은 길어도 요점은 잘 잡히지 않고, 조금만 손보면 될 것 같은데 어디부터 고쳐야 할지 막막합니다.\n\n이런 불편을 살펴본 연구도 있습니다. 2026년 ACM 학회에 발표된 소규모 탐색 연구에서, 주의집중과 정보처리에 어려움을 겪는 참여자들은 AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다. 답변의 분량과 구성을 독자에게 맞출 필요가 있음을 시사합니다. [연구 원문](https://doi.org/10.1145/3803784.3816862)\n\n**그래서 만들었습니다. ClearWrite, 맑은글.**\n\n원문의 뜻과 말투를 살리며, 사람이 읽기 편하도록 문장을 다듬습니다.\n\n다듬은 글은 원문과 직접 비교할 수 있습니다. **형광펜으로 표시된 부분을 누르면, 바꾸기 전 표현과 바꾼 표현, 수정한 이유가 함께 보입니다.** 바뀐 표현이 내 글에 어울리는지 직접 확인하세요.\n\n- **자연스럽게 다듬기:** 어색한 표현과 불필요한 반복을 손질합니다.\n- **목적에 맞는 편집:** 필자의 말투 유지, 기술 문서 등 편집 기준을 선택합니다.\n- **AI 문체 살펴보기:** 반복·상투적 표현 등을 참고용 점수와 실제 문장 근거로 확인합니다.\n- **수정량 확인하기:** 윤문 전후의 글자 차이를 계산해 실제 수정 비율을 보여줍니다.\n\n한국어와 영어를 지원합니다. 설치와 로그인을 마친 **Codex CLI 또는 Claude Code**에 연결해 사용할 수 있습니다. 모델 작업에는 본인 계정의 사용량이 소모됩니다.\n\n**고친 곳을 보고, 이유를 읽고, 내 글로 남기세요.**\n\n[ClearWrite 0.3.1 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/tag/v0.3.1)\n",
+  "proposed_plan": {
+    "schema_version": "1.0",
+    "source_sha256": "93fc4bd5bad1e97262425714e2129a596c5e5f70fd8a1fc94c3a50a549aa09be",
+    "edits": [
+      {
+        "start": 39,
+        "end": 67,
+        "original": "분명 매끄러운데, 읽다 보면 같은 말이 반복됩니다.",
+        "replacement": "겉으로는 매끄러워도 같은 말이 되풀이되는 글이 있습니다.",
+        "reason": "모든 AI 글에 반복이 있다는 인상을 줄이고, 독자가 겪을 수 있는 구체적인 불편으로 표현했습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 68,
+        "end": 123,
+        "original": "설명은 긴데 요점은 잘 잡히지 않고, 조금만 고치면 될 것 같은데 어디부터 손대야 할지 막막합니다.",
+        "replacement": "설명은 길어도 요점은 잘 잡히지 않고, 조금만 손보면 될 것 같은데 어디부터 고쳐야 할지 막막합니다.",
+        "reason": "부정 표현인 잘 잡히지 않고를 유지하면서 연결 표현과 손질 동작을 다듬었습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 146,
+        "end": 241,
+        "original": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서는, 주의집중과 정보처리에 어려움이 있는 참여자들이 AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+        "replacement": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서, 주의집중과 정보처리에 어려움을 겪는 참여자들은 AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+        "reason": "연구의 시기·규모·대상·관찰 내용을 유지하면서 조사와 주어의 호응을 다듬었습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 242,
+        "end": 274,
+        "original": "독자를 고려한 분량과 구성의 중요성을 시사하는 결과입니다.",
+        "replacement": "답변의 분량과 구성을 독자에게 맞출 필요가 있음을 시사합니다.",
+        "reason": "막연한 중요성 표현을 독자에게 맞춘다는 편집 판단으로 연결했습니다. 연구 결과의 해석은 시사한다는 수준으로 유지했습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 359,
+        "end": 404,
+        "original": "원문의 뜻과 말투를 살리면서, 사람이 읽기 편하도록 문장을 다듬는 프로그램입니다.",
+        "replacement": "원문의 뜻과 말투를 살리며, 사람이 읽기 편하도록 문장을 다듬습니다.",
+        "reason": "제품을 다시 정의하는 표현을 덜고 실제로 하는 일을 직접 썼습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 406,
+        "end": 445,
+        "original": "ClearWrite에서는 수정 결과를 원문과 직접 비교할 수 있습니다.",
+        "replacement": "다듬은 글은 원문과 직접 비교할 수 있습니다.",
+        "reason": "바로 앞에 나온 제품명을 반복하지 않고 비교하는 대상을 분명히 했습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 503,
+        "end": 529,
+        "original": "마음에 드는 변화인지 직접 살펴보고 판단하세요.",
+        "replacement": "바뀐 표현이 내 글에 어울리는지 직접 확인하세요.",
+        "reason": "막연한 변화 대신 사용자가 확인할 표현과 판단 기준을 구체적으로 썼습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 694,
+        "end": 723,
+        "original": "이번 윤문에서 실제로 바뀐 글자의 비율을 보여줍니다.",
+        "replacement": "윤문 전후의 글자 차이를 계산해 실제 수정 비율을 보여줍니다.",
+        "reason": "수정 비율이 무엇을 바탕으로 계산되는지 기능 설명에 담았습니다.",
+        "rule": "editorial-context"
+      },
+      {
+        "start": 725,
+        "end": 795,
+        "original": "한국어와 영어를 지원하며, 설치하고 로그인한 **Codex CLI 또는 Claude Code**와 연결해 사용할 수 있습니다.",
+        "replacement": "한국어와 영어를 지원합니다. 설치와 로그인을 마친 **Codex CLI 또는 Claude Code**에 연결해 사용할 수 있습니다.",
+        "reason": "지원 언어와 사용 준비 조건을 두 문장으로 나누되 사용할 수 있다는 가능성 표현을 유지했습니다.",
+        "rule": "editorial-context"
+      }
+    ]
+  },
+  "applied_edits": [
+    {
+      "start": 39,
+      "end": 67,
+      "original": "분명 매끄러운데, 읽다 보면 같은 말이 반복됩니다.",
+      "replacement": "겉으로는 매끄러워도 같은 말이 되풀이되는 글이 있습니다.",
+      "reason": "모든 AI 글에 반복이 있다는 인상을 줄이고, 독자가 겪을 수 있는 구체적인 불편으로 표현했습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 68,
+      "end": 123,
+      "original": "설명은 긴데 요점은 잘 잡히지 않고, 조금만 고치면 될 것 같은데 어디부터 손대야 할지 막막합니다.",
+      "replacement": "설명은 길어도 요점은 잘 잡히지 않고, 조금만 손보면 될 것 같은데 어디부터 고쳐야 할지 막막합니다.",
+      "reason": "부정 표현인 잘 잡히지 않고를 유지하면서 연결 표현과 손질 동작을 다듬었습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 146,
+      "end": 241,
+      "original": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서는, 주의집중과 정보처리에 어려움이 있는 참여자들이 AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+      "replacement": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서, 주의집중과 정보처리에 어려움을 겪는 참여자들은 AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+      "reason": "연구의 시기·규모·대상·관찰 내용을 유지하면서 조사와 주어의 호응을 다듬었습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 242,
+      "end": 274,
+      "original": "독자를 고려한 분량과 구성의 중요성을 시사하는 결과입니다.",
+      "replacement": "답변의 분량과 구성을 독자에게 맞출 필요가 있음을 시사합니다.",
+      "reason": "막연한 중요성 표현을 독자에게 맞춘다는 편집 판단으로 연결했습니다. 연구 결과의 해석은 시사한다는 수준으로 유지했습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 359,
+      "end": 404,
+      "original": "원문의 뜻과 말투를 살리면서, 사람이 읽기 편하도록 문장을 다듬는 프로그램입니다.",
+      "replacement": "원문의 뜻과 말투를 살리며, 사람이 읽기 편하도록 문장을 다듬습니다.",
+      "reason": "제품을 다시 정의하는 표현을 덜고 실제로 하는 일을 직접 썼습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 406,
+      "end": 445,
+      "original": "ClearWrite에서는 수정 결과를 원문과 직접 비교할 수 있습니다.",
+      "replacement": "다듬은 글은 원문과 직접 비교할 수 있습니다.",
+      "reason": "바로 앞에 나온 제품명을 반복하지 않고 비교하는 대상을 분명히 했습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 503,
+      "end": 529,
+      "original": "마음에 드는 변화인지 직접 살펴보고 판단하세요.",
+      "replacement": "바뀐 표현이 내 글에 어울리는지 직접 확인하세요.",
+      "reason": "막연한 변화 대신 사용자가 확인할 표현과 판단 기준을 구체적으로 썼습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 694,
+      "end": 723,
+      "original": "이번 윤문에서 실제로 바뀐 글자의 비율을 보여줍니다.",
+      "replacement": "윤문 전후의 글자 차이를 계산해 실제 수정 비율을 보여줍니다.",
+      "reason": "수정 비율이 무엇을 바탕으로 계산되는지 기능 설명에 담았습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "start": 725,
+      "end": 795,
+      "original": "한국어와 영어를 지원하며, 설치하고 로그인한 **Codex CLI 또는 Claude Code**와 연결해 사용할 수 있습니다.",
+      "replacement": "한국어와 영어를 지원합니다. 설치와 로그인을 마친 **Codex CLI 또는 Claude Code**에 연결해 사용할 수 있습니다.",
+      "reason": "지원 언어와 사용 준비 조건을 두 문장으로 나누되 사용할 수 있다는 가능성 표현을 유지했습니다.",
+      "rule": "editorial-context"
+    }
+  ],
+  "rejected_edits": [],
+  "verification": {
+    "passed": true,
+    "failures": [],
+    "warnings": [
+      "검사 통과는 의미·사실 보존의 증명이 아닙니다. 주체, 인과, 예외를 최종 대조하세요."
+    ],
+    "character_change_rate": 0.103668,
+    "change_rate_method": "SequenceMatcher; autojunk for >4000 chars",
+    "visible_characters_before": 753,
+    "visible_characters_after": 743,
+    "visible_length_ratio": 0.98672,
+    "required_length_ratio": 0.85,
+    "length_policy": "Whitespace-excluded characters, heuristic; not semantic validation",
+    "numbers_before": [
+      "2026년",
+      "10.1145",
+      "3803784.3816862",
+      "0.3.1",
+      "787",
+      "0.3.1"
+    ],
+    "numbers_after": [
+      "2026년",
+      "10.1145",
+      "3803784.3816862",
+      "0.3.1",
+      "787",
+      "0.3.1"
+    ],
+    "semantic_equivalence": "not_established",
+    "original_sha256": "93fc4bd5bad1e97262425714e2129a596c5e5f70fd8a1fc94c3a50a549aa09be",
+    "candidate_sha256": "b6954d221f9cbcf26ccdfbba3c3ea0f0a4d5e2f5342714c025deef7d0ceb68cb"
+  },
+  "before": {
+    "schema_version": "1.0",
+    "language": "mixed",
+    "input_sha256": "93fc4bd5bad1e97262425714e2129a596c5e5f70fd8a1fc94c3a50a549aa09be",
+    "authorship": "undetermined",
+    "ai_probability": null,
+    "ai_style_score": 0.0,
+    "reading_burden_proxy": 0.0,
+    "score_label": "규칙 기반 편집 후보 밀도 (0–100)",
+    "metrics": {
+      "characters": 944,
+      "prose_tokens": 177,
+      "sentence_segments": 18,
+      "mean_tokens_per_segment": 9.83,
+      "long_segment_share": 0.0,
+      "repeated_opening_share": 0.0,
+      "markers_per_100_tokens": 0.0,
+      "protected_spans": 4
+    },
+    "findings": [],
+    "warnings": [],
+    "disclaimer": "문체 점수는 AI 작성 확률이나 인지 피로의 실측값이 아닙니다. 작성 주체는 판정하지 않습니다."
+  },
+  "after": {
+    "schema_version": "1.0",
+    "language": "mixed",
+    "input_sha256": "b6954d221f9cbcf26ccdfbba3c3ea0f0a4d5e2f5342714c025deef7d0ceb68cb",
+    "authorship": "undetermined",
+    "ai_probability": null,
+    "ai_style_score": 0.0,
+    "reading_burden_proxy": 0.0,
+    "score_label": "규칙 기반 편집 후보 밀도 (0–100)",
+    "metrics": {
+      "characters": 937,
+      "prose_tokens": 179,
+      "sentence_segments": 19,
+      "mean_tokens_per_segment": 9.42,
+      "long_segment_share": 0.0,
+      "repeated_opening_share": 0.0,
+      "markers_per_100_tokens": 0.0,
+      "protected_spans": 4
+    },
+    "findings": [],
+    "warnings": [],
+    "disclaimer": "문체 점수는 AI 작성 확률이나 인지 피로의 실측값이 아닙니다. 작성 주체는 판정하지 않습니다."
+  },
+  "disclaimer": "문체 점수는 AI 작성 확률이나 인지 피로의 실측값이 아닙니다. 작성 주체는 판정하지 않습니다.",
+  "backend": "supplied-plan",
+  "before_segments": [
+    {
+      "text": "**여러분, 아직도 AI가 써준 글을 그대로 붙여넣고 계신가요?**\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "분명",
+      "change_id": 1,
+      "kind": "removed"
+    },
+    {
+      "text": " 매끄러",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "운데, 읽다 보면",
+      "change_id": 1,
+      "kind": "removed"
+    },
+    {
+      "text": " 같은 말이 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "반복됩",
+      "change_id": 1,
+      "kind": "removed"
+    },
+    {
+      "text": "니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "설명은 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "긴데",
+      "change_id": 2,
+      "kind": "removed"
+    },
+    {
+      "text": " 요점은 잘 잡히지 않고, 조금만 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "고치",
+      "change_id": 2,
+      "kind": "removed"
+    },
+    {
+      "text": "면 될 것 같은데 어디부터 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "손대",
+      "change_id": 2,
+      "kind": "removed"
+    },
+    {
+      "text": "야 할지 막막합니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n이런 불편을 살펴본 연구도 있습니다. ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "는",
+      "change_id": 3,
+      "kind": "removed"
+    },
+    {
+      "text": ", 주의집중과 정보처리에 어려움",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "이",
+      "change_id": 3,
+      "kind": "removed"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "있",
+      "change_id": 3,
+      "kind": "removed"
+    },
+    {
+      "text": "는 참여자들",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "이",
+      "change_id": 3,
+      "kind": "removed"
+    },
+    {
+      "text": " AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "독자를 고려한",
+      "change_id": 4,
+      "kind": "removed"
+    },
+    {
+      "text": " 분량과 구성",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "의",
+      "change_id": 4,
+      "kind": "removed"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "중",
+      "change_id": 4,
+      "kind": "removed"
+    },
+    {
+      "text": "요",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "성",
+      "change_id": 4,
+      "kind": "removed"
+    },
+    {
+      "text": "을 시사",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "하는 결과입",
+      "change_id": 4,
+      "kind": "removed"
+    },
+    {
+      "text": "니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " [연구 원문](https://doi.org/10.1145/3803784.3816862)\n\n**그래서 만들었습니다. ClearWrite, 맑은글.**\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "원문의 뜻과 말투를 살리",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "면서",
+      "change_id": 5,
+      "kind": "removed"
+    },
+    {
+      "text": ", 사람이 읽기 편하도록 문장을 다듬",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "는 프로그램입",
+      "change_id": 5,
+      "kind": "removed"
+    },
+    {
+      "text": "니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "ClearWrite에서는",
+      "change_id": 6,
+      "kind": "removed"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "수정 결과를",
+      "change_id": 6,
+      "kind": "removed"
+    },
+    {
+      "text": " 원문과 직접 비교할 수 있습니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " **형광펜으로 표시된 부분을 누르면, 바꾸기 전 표현과 바꾼 표현, 수정한 이유가 함께 보입니다.** ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "마음",
+      "change_id": 7,
+      "kind": "removed"
+    },
+    {
+      "text": "에 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "드",
+      "change_id": 7,
+      "kind": "removed"
+    },
+    {
+      "text": "는",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " 변화인",
+      "change_id": 7,
+      "kind": "removed"
+    },
+    {
+      "text": "지 직접 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "살펴보고 판단",
+      "change_id": 7,
+      "kind": "removed"
+    },
+    {
+      "text": "하세요.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n- **자연스럽게 다듬기:** 어색한 표현과 불필요한 반복을 손질합니다.\n- **목적에 맞는 편집:** 필자의 말투 유지, 기술 문서 등 편집 기준을 선택합니다.\n- **AI 문체 살펴보기:** 반복·상투적 표현 등을 참고용 점수와 실제 문장 근거로 확인합니다.\n- **수정량 확인하기:** ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "이번 ",
+      "change_id": 8,
+      "kind": "removed"
+    },
+    {
+      "text": "윤문",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "에서",
+      "change_id": 8,
+      "kind": "removed"
+    },
+    {
+      "text": " 실제",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "로",
+      "change_id": 8,
+      "kind": "removed"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "바뀐 글자의",
+      "change_id": 8,
+      "kind": "removed"
+    },
+    {
+      "text": " 비율을 보여줍니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "한국어와 영어를 지원",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "하며,",
+      "change_id": 9,
+      "kind": "removed"
+    },
+    {
+      "text": " 설치",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "하고",
+      "change_id": 9,
+      "kind": "removed"
+    },
+    {
+      "text": " 로그인",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "한",
+      "change_id": 9,
+      "kind": "removed"
+    },
+    {
+      "text": " **Codex CLI 또는 Claude Code**",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "와",
+      "change_id": 9,
+      "kind": "removed"
+    },
+    {
+      "text": " 연결해 사용할 수 있습니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " 모델 작업에는 본인 계정의 사용량이 소모됩니다.\n\n**고친 곳을 보고, 이유를 읽고, 내 글로 남기세요.**\n\n[ClearWrite 0.3.1 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/tag/v0.3.1)\n",
+      "change_id": null,
+      "kind": "same"
+    }
+  ],
+  "after_segments": [
+    {
+      "text": "**여러분, 아직도 AI가 써준 글을 그대로 붙여넣고 계신가요?**\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "겉으로는",
+      "change_id": 1,
+      "kind": "added"
+    },
+    {
+      "text": " 매끄러",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "워도",
+      "change_id": 1,
+      "kind": "added"
+    },
+    {
+      "text": " 같은 말이 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "되풀이되는 글이 있습",
+      "change_id": 1,
+      "kind": "added"
+    },
+    {
+      "text": "니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "설명은 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "길어도",
+      "change_id": 2,
+      "kind": "added"
+    },
+    {
+      "text": " 요점은 잘 잡히지 않고, 조금만 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "손보",
+      "change_id": 2,
+      "kind": "added"
+    },
+    {
+      "text": "면 될 것 같은데 어디부터 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "고쳐",
+      "change_id": 2,
+      "kind": "added"
+    },
+    {
+      "text": "야 할지 막막합니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n이런 불편을 살펴본 연구도 있습니다. ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "",
+      "change_id": 3,
+      "kind": "deletion_marker"
+    },
+    {
+      "text": ", 주의집중과 정보처리에 어려움",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "을",
+      "change_id": 3,
+      "kind": "added"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "겪",
+      "change_id": 3,
+      "kind": "added"
+    },
+    {
+      "text": "는 참여자들",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "은",
+      "change_id": 3,
+      "kind": "added"
+    },
+    {
+      "text": " AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "답변의",
+      "change_id": 4,
+      "kind": "added"
+    },
+    {
+      "text": " 분량과 구성",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "을",
+      "change_id": 4,
+      "kind": "added"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "독자에게 맞출 필",
+      "change_id": 4,
+      "kind": "added"
+    },
+    {
+      "text": "요",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "가 있음",
+      "change_id": 4,
+      "kind": "added"
+    },
+    {
+      "text": "을 시사",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "합",
+      "change_id": 4,
+      "kind": "added"
+    },
+    {
+      "text": "니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " [연구 원문](https://doi.org/10.1145/3803784.3816862)\n\n**그래서 만들었습니다. ClearWrite, 맑은글.**\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "원문의 뜻과 말투를 살리",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "며",
+      "change_id": 5,
+      "kind": "added"
+    },
+    {
+      "text": ", 사람이 읽기 편하도록 문장을 다듬",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "습",
+      "change_id": 5,
+      "kind": "added"
+    },
+    {
+      "text": "니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "다듬은",
+      "change_id": 6,
+      "kind": "added"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "글은",
+      "change_id": 6,
+      "kind": "added"
+    },
+    {
+      "text": " 원문과 직접 비교할 수 있습니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " **형광펜으로 표시된 부분을 누르면, 바꾸기 전 표현과 바꾼 표현, 수정한 이유가 함께 보입니다.** ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "바뀐 표현이 내 글",
+      "change_id": 7,
+      "kind": "added"
+    },
+    {
+      "text": "에 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "어울리",
+      "change_id": 7,
+      "kind": "added"
+    },
+    {
+      "text": "는",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "",
+      "change_id": 7,
+      "kind": "deletion_marker"
+    },
+    {
+      "text": "지 직접 ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "확인",
+      "change_id": 7,
+      "kind": "added"
+    },
+    {
+      "text": "하세요.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n- **자연스럽게 다듬기:** 어색한 표현과 불필요한 반복을 손질합니다.\n- **목적에 맞는 편집:** 필자의 말투 유지, 기술 문서 등 편집 기준을 선택합니다.\n- **AI 문체 살펴보기:** 반복·상투적 표현 등을 참고용 점수와 실제 문장 근거로 확인합니다.\n- **수정량 확인하기:** ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "",
+      "change_id": 8,
+      "kind": "deletion_marker"
+    },
+    {
+      "text": "윤문",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " 전후의 글자 차이를 계산해",
+      "change_id": 8,
+      "kind": "added"
+    },
+    {
+      "text": " 실제",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "",
+      "change_id": 8,
+      "kind": "deletion_marker"
+    },
+    {
+      "text": " ",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "수정",
+      "change_id": 8,
+      "kind": "added"
+    },
+    {
+      "text": " 비율을 보여줍니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "\n\n",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "한국어와 영어를 지원",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "합니다.",
+      "change_id": 9,
+      "kind": "added"
+    },
+    {
+      "text": " 설치",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "와",
+      "change_id": 9,
+      "kind": "added"
+    },
+    {
+      "text": " 로그인",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "을 마친",
+      "change_id": 9,
+      "kind": "added"
+    },
+    {
+      "text": " **Codex CLI 또는 Claude Code**",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": "에",
+      "change_id": 9,
+      "kind": "added"
+    },
+    {
+      "text": " 연결해 사용할 수 있습니다.",
+      "change_id": null,
+      "kind": "same"
+    },
+    {
+      "text": " 모델 작업에는 본인 계정의 사용량이 소모됩니다.\n\n**고친 곳을 보고, 이유를 읽고, 내 글로 남기세요.**\n\n[ClearWrite 0.3.1 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/tag/v0.3.1)\n",
+      "change_id": null,
+      "kind": "same"
+    }
+  ],
+  "changes": [
+    {
+      "id": 1,
+      "start": 39,
+      "end": 67,
+      "output_start": 39,
+      "output_end": 70,
+      "original": "분명 매끄러운데, 읽다 보면 같은 말이 반복됩니다.",
+      "replacement": "겉으로는 매끄러워도 같은 말이 되풀이되는 글이 있습니다.",
+      "reason": "모든 AI 글에 반복이 있다는 인상을 줄이고, 독자가 겪을 수 있는 구체적인 불편으로 표현했습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 2,
+      "start": 68,
+      "end": 123,
+      "output_start": 71,
+      "output_end": 127,
+      "original": "설명은 긴데 요점은 잘 잡히지 않고, 조금만 고치면 될 것 같은데 어디부터 손대야 할지 막막합니다.",
+      "replacement": "설명은 길어도 요점은 잘 잡히지 않고, 조금만 손보면 될 것 같은데 어디부터 고쳐야 할지 막막합니다.",
+      "reason": "부정 표현인 잘 잡히지 않고를 유지하면서 연결 표현과 손질 동작을 다듬었습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 3,
+      "start": 146,
+      "end": 241,
+      "output_start": 150,
+      "output_end": 244,
+      "original": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서는, 주의집중과 정보처리에 어려움이 있는 참여자들이 AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+      "replacement": "2026년 ACM 학회에 발표된 소규모 탐색 연구에서, 주의집중과 정보처리에 어려움을 겪는 참여자들은 AI 답변의 지나친 길이와 빽빽한 구성을 이용 장벽으로 꼽았습니다.",
+      "reason": "연구의 시기·규모·대상·관찰 내용을 유지하면서 조사와 주어의 호응을 다듬었습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 4,
+      "start": 242,
+      "end": 274,
+      "output_start": 245,
+      "output_end": 279,
+      "original": "독자를 고려한 분량과 구성의 중요성을 시사하는 결과입니다.",
+      "replacement": "답변의 분량과 구성을 독자에게 맞출 필요가 있음을 시사합니다.",
+      "reason": "막연한 중요성 표현을 독자에게 맞춘다는 편집 판단으로 연결했습니다. 연구 결과의 해석은 시사한다는 수준으로 유지했습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 5,
+      "start": 359,
+      "end": 404,
+      "output_start": 364,
+      "output_end": 402,
+      "original": "원문의 뜻과 말투를 살리면서, 사람이 읽기 편하도록 문장을 다듬는 프로그램입니다.",
+      "replacement": "원문의 뜻과 말투를 살리며, 사람이 읽기 편하도록 문장을 다듬습니다.",
+      "reason": "제품을 다시 정의하는 표현을 덜고 실제로 하는 일을 직접 썼습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 6,
+      "start": 406,
+      "end": 445,
+      "output_start": 404,
+      "output_end": 429,
+      "original": "ClearWrite에서는 수정 결과를 원문과 직접 비교할 수 있습니다.",
+      "replacement": "다듬은 글은 원문과 직접 비교할 수 있습니다.",
+      "reason": "바로 앞에 나온 제품명을 반복하지 않고 비교하는 대상을 분명히 했습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 7,
+      "start": 503,
+      "end": 529,
+      "output_start": 487,
+      "output_end": 514,
+      "original": "마음에 드는 변화인지 직접 살펴보고 판단하세요.",
+      "replacement": "바뀐 표현이 내 글에 어울리는지 직접 확인하세요.",
+      "reason": "막연한 변화 대신 사용자가 확인할 표현과 판단 기준을 구체적으로 썼습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 8,
+      "start": 694,
+      "end": 723,
+      "output_start": 679,
+      "output_end": 713,
+      "original": "이번 윤문에서 실제로 바뀐 글자의 비율을 보여줍니다.",
+      "replacement": "윤문 전후의 글자 차이를 계산해 실제 수정 비율을 보여줍니다.",
+      "reason": "수정 비율이 무엇을 바탕으로 계산되는지 기능 설명에 담았습니다.",
+      "rule": "editorial-context"
+    },
+    {
+      "id": 9,
+      "start": 725,
+      "end": 795,
+      "output_start": 715,
+      "output_end": 788,
+      "original": "한국어와 영어를 지원하며, 설치하고 로그인한 **Codex CLI 또는 Claude Code**와 연결해 사용할 수 있습니다.",
+      "replacement": "한국어와 영어를 지원합니다. 설치와 로그인을 마친 **Codex CLI 또는 Claude Code**에 연결해 사용할 수 있습니다.",
+      "reason": "지원 언어와 사용 준비 조건을 두 문장으로 나누되 사용할 수 있다는 가능성 표현을 유지했습니다.",
+      "rule": "editorial-context"
+    }
+  ],
+  "change_statistics": {
+    "removed_characters": 101,
+    "added_characters": 94,
+    "original_characters": 944,
+    "result_characters": 937,
+    "rate_percent": 10.3668,
+    "method": "(removed + added) / (original + result) * 100; applied edit character diffs",
+    "includes_whitespace": true,
+    "unit": "unicode_codepoints"
+  },
+  "offset_unit": "unicode_codepoints"
+}
