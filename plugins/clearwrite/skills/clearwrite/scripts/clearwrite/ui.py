@@ -1,5 +1,6 @@
 """Loopback editor: consent-gated rewriting, model style assessments and diffs."""
 from __future__ import annotations
+import html
 import json
 from functools import partial
 from pathlib import Path
@@ -16,10 +17,25 @@ from .core import InputError, MODES, analyze, apply_plan, checked_text, make_pla
 from .io import strict_json
 from .jobs import BusyError, Jobs
 from .model_cli import backend_status, model_plan, model_style
+from .personas import DEFAULT_PERSONA, INTENSITIES, PERSONAS, edit_budget, get_persona, resolve_style
+from .styles import KEEP, STYLES, conformance
 from .providers import ProviderError
 
 WEB = Path(__file__).with_name('web')
-PAGE = (WEB / 'index.html').read_text(encoding='utf-8').replace('__STYLE__', (WEB / 'app.css').read_text(encoding='utf-8')).replace('__SCRIPT__', (WEB / 'app.js').read_text(encoding='utf-8')).replace('__VERSION__', __version__)
+
+def persona_options() -> str:
+    return ''.join(
+        f'<option value="{p.id}" data-summary="{html.escape(p.summary)}" data-style="{p.default_style}"{" selected" if p.id == DEFAULT_PERSONA else ""}>'
+        f'{html.escape(p.label)} · {INTENSITIES[p.intensity]}{" · 말투 변경" if p.changes_voice else ""}</option>'
+        for p in PERSONAS.values())
+
+def style_options() -> str:
+    # The empty value lets the persona choose (formal 합니다체, friendly 해요체, others keep).
+    return '<option value="" selected>페르소나 기본값</option>' + ''.join(
+        f'<option value="{s.id}">{html.escape(s.label)}{" · " + html.escape(s.example) if s.example else ""}</option>'
+        for s in STYLES.values())
+
+PAGE = (WEB / 'index.html').read_text(encoding='utf-8').replace('__STYLE__', (WEB / 'app.css').read_text(encoding='utf-8')).replace('__SCRIPT__', (WEB / 'app.js').read_text(encoding='utf-8')).replace('__VERSION__', __version__).replace('__PERSONA_OPTIONS__', persona_options()).replace('__STYLE_OPTIONS__', style_options())
 DEMO_TEXT = ('처음 도구를 사용하는 분들은 다음 절차를 참고하여 설정을 진행할 수 있습니다. '
              '설정을 시작하기 전에는 원본 파일을 별도로 보관해야 합니다.\n\n'
              '설정이 끝나면 결과 파일을 열어 내용이 올바른지 확인하세요. '
@@ -48,12 +64,20 @@ def rewrite_job(data: dict, cancel: threading.Event) -> dict:
     model = data.get('model') or None
     if model is not None and not isinstance(model, str):
         raise InputError('모델 이름은 문자열이어야 합니다.')
+    persona = get_persona(data.get('persona'))
+    style = resolve_style(persona, data.get('style') or None)
+    max_change, policy = edit_budget(persona, style)
     plan = make_plan(text, mode='preserve') if mode == 'preserve' else model_plan(
-        text, backend=backend, allow_model=True, model=model, mode=mode, cancel=cancel)
-    result = apply_plan(text, plan)
+        text, backend=backend, allow_model=True, model=model, mode=mode, cancel=cancel,
+        persona=persona.id, style=style.id)
+    result = apply_plan(text, plan, max_change=max_change, policy=policy)
     result.update(comparison(text, result))
     result.update(backend='preserve' if mode == 'preserve' else backend, source_text=text, demonstration=False,
-                  model_requests=0 if mode == 'preserve' else None, cli_runs=0 if mode == 'preserve' else 1)
+                  model_requests=0 if mode == 'preserve' else None, cli_runs=0 if mode == 'preserve' else 1,
+                  persona=persona.public(), edit_budget={'max_change': max_change, 'policy': policy},
+                  style=style.public())
+    if style.id != KEEP and mode != 'preserve':
+        result['style_conformance'] = {'before': conformance(text, style.id), 'after': conformance(result['text'], style.id)}
     return result
 
 def style_job(data: dict, cancel: threading.Event) -> dict:
@@ -158,7 +182,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200 if result else 404, result or {'error': '작업이 없습니다.'})
                 return
             if self.path == '/api/jobs':
-                allowed = {'action', 'text', 'candidate', 'mode', 'backend', 'model', 'allow_model'}
+                allowed = {'action', 'text', 'candidate', 'mode', 'persona', 'style', 'backend', 'model', 'allow_model'}
                 if set(data) - allowed or not isinstance(data.get('text'), str):
                     raise InputError('요청 형식이 올바르지 않습니다.')
                 checked_text(data['text'])
@@ -166,6 +190,7 @@ class Handler(BaseHTTPRequestHandler):
                 if action == 'rewrite':
                     if data.get('backend') not in {'codex', 'claude'} or (data.get('mode') != 'preserve' and data.get('allow_model') is not True):
                         raise InputError('모델을 선택하고 원문 전송에 동의하세요.')
+                    resolve_style(get_persona(data.get('persona')), data.get('style') or None)
                     task = partial(rewrite_job, data)
                 elif action == 'style':
                     if data.get('backend') not in {'codex', 'claude'} or data.get('allow_model') is not True:

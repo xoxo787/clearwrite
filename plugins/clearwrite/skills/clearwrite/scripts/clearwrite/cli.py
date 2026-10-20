@@ -12,6 +12,8 @@ from . import __version__
 from .core import (InputError, MODES, DEFAULT_MIN_RETENTION, analyze, apply_plan, make_plan, prepare,
                    proposal_schema, resolve_proposals, verify)
 from .io import dumps, ensure_destination, read_json, read_text, write_text
+from .personas import BUILTIN_PERSONAS, PERSONAS, edit_budget, get_persona, resolve_style
+from .styles import KEEP, STYLES, conformance
 from .providers import ProviderError, ollama_plan
 
 
@@ -32,10 +34,16 @@ def parser() -> argparse.ArgumentParser:
         if name in {"rewrite", "apply", "verify"}:
             c.add_argument("--min-retention", type=float, default=DEFAULT_MIN_RETENTION,
                            help="정보 압축 방지용 최소 분량 비율(기본 0.85, 0이면 해제). 짧은 글은 완화 적용")
+        if name in {"rewrite", "prepare", "apply", "verify"}:
+            c.add_argument("--persona", choices=list(PERSONAS), default=None,
+                           help="편집자 페르소나: 말투와 개입 강도. 기본 editor(담백한 편집자)")
+            c.add_argument("--style", choices=list(STYLES), default=None,
+                           help="문법 스타일(종결어미). 비우면 페르소나 기본값: formal 합니다체, friendly 해요체, 나머지 keep")
         if name in {"rewrite", "apply"}:
             c.add_argument("--report", help="전후 점수·수정 내역·보존 검사를 담는 JSON. 원문도 포함됨")
-            c.add_argument("--max-change", type=float, default=.35)
-            c.add_argument("--policy", choices=["atomic", "safe-subset"], default="atomic")
+            c.add_argument("--max-change", type=float, default=None, help="비우면 페르소나 기본값(editor 0.35)")
+            c.add_argument("--policy", choices=["atomic", "safe-subset"], default=None,
+                           help="비우면 페르소나 기본값(editor atomic)")
         if name == "rewrite":
             c.add_argument("--backend", choices=["builtin", "codex", "claude", "ollama"], default="builtin")
             c.add_argument("--allow-model", action="store_true", help="선택한 Codex/Claude 모델 서비스로 원문 전송 동의")
@@ -50,7 +58,7 @@ def parser() -> argparse.ArgumentParser:
             group.add_argument("--proposals", help="오프셋 없는 제안 JSON")
         if name == "verify":
             c.add_argument("candidate")
-            c.add_argument("--max-change", type=float, default=.35)
+            c.add_argument("--max-change", type=float, default=None, help="비우면 페르소나 기본값(editor 0.35)")
         if name == "detect":
             c.add_argument("--provider", choices=["style", "codex", "claude"], default="style")
             c.add_argument("--allow-model", action="store_true", help="선택한 모델로 문체 분석할 글 전송 동의")
@@ -128,14 +136,19 @@ def main(argv: list[str] | None = None) -> int:
             value = make_plan(text, mode=args.mode, terms=terms)
         elif args.command == "prepare":
             voice = read_text(args.voice, max_chars=3000) if args.voice else ""
-            value = prepare(text, mode=args.mode, terms=terms, voice=voice)
+            value = prepare(text, mode=args.mode, terms=terms, voice=voice, persona=args.persona, style=args.style)
             if args.proposals:
                 value["instruction"] += "\nstart/end 없이 original/replacement/reason/rule만 작성한다. original은 원문에 정확히 한 번만 나오는 구간이어야 한다."
                 value["output_schema"] = proposal_schema()
         elif args.command == "verify":
-            value = verify(text, read_text(args.candidate), terms=terms, max_change=args.max_change,
+            selected = get_persona(args.persona)
+            max_change, _ = edit_budget(selected, resolve_style(selected, args.style), args.max_change)
+            value = verify(text, read_text(args.candidate), terms=terms, max_change=max_change,
                            min_retention=args.min_retention)
         else:
+            persona = get_persona(args.persona)
+            style = resolve_style(persona, args.style)
+            max_change, policy = edit_budget(persona, style, args.max_change, args.policy)
             if args.command == "apply":
                 plan = read_json(args.plan or args.proposals)
                 if args.proposals:
@@ -149,20 +162,31 @@ def main(argv: list[str] | None = None) -> int:
                     from .model_cli import model_plan
                     voice = read_text(args.voice, max_chars=3000) if args.voice else ""
                     plan = model_plan(text, backend=args.backend, allow_model=args.allow_model, model=args.model,
-                                      mode=args.mode, terms=terms, voice=voice, timeout=args.timeout)
+                                      mode=args.mode, terms=terms, voice=voice, timeout=args.timeout,
+                                      persona=persona.id, style=style.id)
                 elif args.backend == "ollama":
                     if not args.model:
                         raise InputError("--backend ollama에는 --model이 필요합니다. 모델을 자동 설치하지 않습니다.")
                     voice = read_text(args.voice, max_chars=3000) if args.voice else ""
                     plan = ollama_plan(text, model=args.model, mode=args.mode, terms=terms,
-                                       voice=voice, port=args.ollama_port, timeout=args.timeout)
+                                       voice=voice, port=args.ollama_port, timeout=args.timeout,
+                                       persona=persona.id, style=style.id)
                 else:
                     if args.voice:
                         raise InputError("builtin 모드는 문체 예시를 해석하지 않습니다. prepare 또는 Ollama를 사용하세요.")
+                    if persona.id not in BUILTIN_PERSONAS or style.id != KEEP:
+                        raise InputError("builtin 규칙은 페르소나 말투나 문법 스타일을 적용하지 못합니다. "
+                                         "proofreader·editor와 --style keep을 쓰거나 모델 백엔드를 선택하세요.")
                     plan = make_plan(text, mode=args.mode, terms=terms)
-            result = apply_plan(text, plan, terms=terms, max_change=args.max_change,
-                                policy=args.policy, min_retention=args.min_retention)
+            result = apply_plan(text, plan, terms=terms, max_change=max_change,
+                                policy=policy, min_retention=args.min_retention)
             result["backend"] = backend
+            result["persona"] = persona.public()
+            result["edit_budget"] = {"max_change": max_change, "policy": policy}
+            result["style"] = style.public()
+            if style.id != KEEP:
+                result["style_conformance"] = {"before": conformance(text, style.id, terms=terms),
+                                               "after": conformance(result["text"], style.id, terms=terms)}
             from .comparison import comparison
             result.update(comparison(text, result))
             if args.report:

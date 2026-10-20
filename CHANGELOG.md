@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 — 2026-10-21
+
+Added editor personas that set register and intervention strength: `proofreader` (light, 15%, atomic), `editor` (default, unchanged 35% atomic), `formal` (합니다체), `columnist`, `plain` and `friendly` (해요체). The last four use a 50% change budget and the safe-subset policy, so one gated edit no longer discards every other passing edit. All personas keep the same preservation gates and forbid new facts. `rewrite`, `prepare`, `apply` and `verify` accept `--persona`; explicit `--max-change`/`--policy` still win. Strong personas are asked for sentence-sized edits, because multi-sentence rewrites tripped the local compression gate even when only filler was cut. Reports record `persona` and `edit_budget`. Builtin rules accept only `proofreader` and `editor`. The editor adds a persona selector and reports edits dropped by safe-subset.
+
+Fixed the Claude Code backend for subscription logins. `--bare` reads only `ANTHROPIC_API_KEY`, which ClearWrite strips, so every Claude request failed with "Not logged in". Isolation now uses `--setting-sources ""` and `--disable-slash-commands`; the `--disallowedTools '*'` rule is removed because it also denied the StructuredOutput tool. Verified with Claude Code 2.1.304: no hooks, skills, tools or MCP servers load, and the user CLAUDE.md is not included.
+
+Added grammar styles, chosen apart from personas: `--style keep|hamnida|haeyo|handa` (합니다체·해요체·한다체) unifies Korean sentence endings. Without `--style`, `formal` keeps 합니다체 and `friendly` keeps 해요체, so their previous behavior is unchanged. A style conversion gets at least a 35% budget and the safe-subset policy. Reports add `style` and `style_conformance` (before/after share of sentences ending in the target register; a rule-based count that skips quotes, code and headings). The editor adds a style selector and shows the rate. 개조식 is not included yet.
+
+The compression gates no longer count information-free filler as lost content. Cutting phrases such as "In conclusion", "it is important to note that", "Let's dive in" or "결론적으로", or using a rule's concise equivalent ("in order to" → "to"), is measured against the filler-free original; compressing the remaining content is still blocked. Reports add `filler_adjusted_length_ratio` beside `visible_length_ratio`. Number, scope, direction and protected-span gates are unchanged.
+
+The scope gate no longer treats the standalone adverb "보다" (보다 효율적으로, "more") as a comparison, which blocked "보다 → 더" and some sentence-ending conversions. The attached particle (전년보다) is still guarded.
+
+Redesigned the editor as a proofreading sheet: cool paper with a blue-pencil accent, settings gathered into one band, Myeongjo serif for the text being edited and the wordmark, blue highlighter marks with pencil underlines, margin-note styling for edit reasons, and one ruled panel instead of three cards for style scores. Only local fonts are referenced, so the CSP is unchanged. Element IDs and editor behavior are unchanged.
+
+Web assets are pinned to LF so bundle hashes match across platforms.
+
 ## 0.3.1 — 2026-10-18
 
 Replaced ClearWrite's prompt, response and stderr temporary files with bounded subprocess pipes. Codex responses now come from the final agent message in its documented JSONL stream; Claude's JSON envelope is read from stdout. Only the static response schema is written to the temporary working directory. ClearWrite no longer creates prose-bearing request files even if the parent process exits abruptly. CLI/provider-owned storage and earlier-version leftovers remain outside this guarantee.
