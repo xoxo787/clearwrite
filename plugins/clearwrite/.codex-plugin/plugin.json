@@ -1,6 +1,6 @@
 {
   "name": "clearwrite",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "한국어·영어 글의 읽기 부담을 줄이는 최소 윤문과 문체·원문 보존 검사. AI 저자 판별을 보증하지 않습니다.",
   "skills": "./skills/",
   "interface": {

@@ -4,7 +4,7 @@
 
 **어디를 왜 고쳤는지 보여 주는 한국어·영어 윤문 프로그램**
 
-[Windows 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/download/v0.3.1/ClearWrite-0.3.1-Windows-x64.zip) · [사용 설명서](docs/DESKTOP.md) · [English](README.en.md) · [오류 제보](https://github.com/xoxo787/clearwrite/issues)
+[Windows 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/download/v0.4.0/ClearWrite-0.4.0-Windows-x64.zip) · [사용 설명서](docs/DESKTOP.md) · [English](README.en.md) · [오류 제보](https://github.com/xoxo787/clearwrite/issues)
 
 [![Offline tests](https://github.com/xoxo787/clearwrite/actions/workflows/ci.yml/badge.svg)](https://github.com/xoxo787/clearwrite/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-285d4c)](LICENSE)
@@ -70,7 +70,7 @@
 ### Windows에서 사용하기
 
 1. [Codex CLI](https://developers.openai.com/codex/cli/) 또는 [Claude Code](https://code.claude.com/docs/en/overview)를 설치하고 본인 계정으로 로그인합니다. 데스크톱 앱 로그인만으로 CLI가 준비되지는 않습니다.
-2. [Windows x64 ZIP](https://github.com/xoxo787/clearwrite/releases/download/v0.3.1/ClearWrite-0.3.1-Windows-x64.zip)을 내려받아 **전체 압축을 풉니다**.
+2. [Windows x64 ZIP](https://github.com/xoxo787/clearwrite/releases/download/v0.4.0/ClearWrite-0.4.0-Windows-x64.zip)을 내려받아 **전체 압축을 풉니다**.
 3. `ClearWrite/ClearWrite.exe`를 실행합니다. `_internal` 폴더는 실행 파일 옆에 그대로 두세요.
 4. **예시 체험**을 눌러 수정 표시와 이유를 살펴봅니다. 이 버튼은 모델을 호출하지 않습니다.
 5. 글을 입력하고 사용할 모델을 고릅니다. 전송에 동의한 뒤 **윤문하기**를 누릅니다.
@@ -127,6 +127,23 @@ Pangram 같은 별도 탐지 서비스의 API 키는 필요하지 않습니다. 
 
 ClearWrite는 글의 뜻과 말투를 유지하면서 **필요한 만큼 다듬는 것**을 목표로 합니다. 수정안이 가리키는 원문이 맞는지, 숫자·단위·일부 조건 표현이 바뀌지 않았는지 살핍니다. 인용문·코드·보호 용어를 지키고 글이 지나치게 줄어들지 않는지도 검사합니다. 허용된 변경량이나 분량 보존 기준을 넘는 수정안은 차단할 수 있습니다.
 
+### 편집자 페르소나로 개입 강도 고르기
+
+얼마나 과감하게, 어떤 말투로 고칠지는 **편집자 페르소나**로 정합니다. 화면의 `편집자 페르소나` 목록이나 CLI의 `--persona`로 선택합니다.
+
+| 페르소나 | 개입 강도 | 하는 일 |
+| --- | --- | --- |
+| 꼼꼼한 교정자 `proofreader` | 가볍게 | 맞춤법·띄어쓰기·조사·이중 피동만 고칩니다. |
+| 담백한 편집자 `editor` (기본) | 보통 | 말투를 지키며 반복과 상투적 예고를 다듬습니다. |
+| 격식 있는 보고자 `formal` | 보통 · 말투 변경 | 합니다체로 맞추고 구어·수사 의문을 정리합니다. |
+| 칼럼니스트 `columnist` | 적극적으로 | 관점은 지키되 문장을 재구성해 흐름을 살립니다. |
+| 쉬운 말 해설가 `plain` | 적극적으로 | 긴 문장을 나누고 어려운 낱말을 쉬운 말로 바꿉니다. |
+| 다정한 안내자 `friendly` | 적극적으로 · 말투 변경 | 해요체로 바꿔 부드럽게 씁니다. |
+
+**문법 스타일**은 페르소나와 따로 고릅니다. 종결어미를 `합니다체`·`해요체`·`한다체`로 통일하거나 `원문 유지`를 선택합니다. 고르지 않으면 페르소나 기본값을 따릅니다(격식 있는 보고자는 합니다체, 다정한 안내자는 해요체, 나머지는 원문 유지). 예를 들어 "칼럼니스트처럼 과감하게, 한다체로"를 고를 수 있습니다. 결과에는 목표 어미로 끝난 문장의 비율(예: 20문장 중 19문장, 95%)을 함께 보여줍니다. 이 비율은 문장 끝 어미만 보는 규칙 판정이며 인용·코드·제목은 세지 않습니다.
+
+강도가 높을수록 허용 변경량이 커집니다(교정자 15%, 기본 35%, 나머지 50%). 문법 스타일을 바꾸면 최소 35%까지 허용하고 검사에 걸린 제안만 빼고 적용합니다. 칼럼니스트·쉬운 말·말투 변경 페르소나는 검사에 걸린 제안만 빼고 나머지를 적용합니다. 어느 페르소나든 숫자·부정·조건·인용 보존 검사는 똑같이 적용되고, 새 사실을 더하지 않습니다.
+
 이 검사가 모든 의미 변화나 사실 왜곡을 찾아내지는 못합니다. 완성된 글을 원문과 대조해 확인해 주세요. 어떤 기준을 쓰는지와 검사의 한계는 [구조와 판단 기준](docs/ARCHITECTURE.md)에서 볼 수 있습니다.
 
 ## 모델 연결과 글의 보관
@@ -148,6 +165,12 @@ ClearWrite는 글의 뜻과 말투를 유지하면서 **필요한 만큼 다듬�
 ```sh
 # 로그인된 Codex CLI로 윤문
 python rewrite.py rewrite input.txt --backend codex --allow-model -o edited.txt --report report.json
+
+# 페르소나로 개입 강도·말투 선택 (proofreader / editor / formal / columnist / plain / friendly)
+python rewrite.py rewrite input.txt --backend claude --allow-model --persona columnist -o edited.txt
+
+# 문법 스타일 따로 선택 (keep / hamnida / haeyo / handa)
+python rewrite.py rewrite input.txt --backend claude --allow-model --persona columnist --style handa -o edited.txt
 
 # 원문과 수정본의 문체를 함께 평가
 python rewrite.py detect input.txt --provider codex --candidate edited.txt --allow-model -o style.json

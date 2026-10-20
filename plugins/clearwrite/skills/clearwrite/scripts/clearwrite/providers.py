@@ -57,7 +57,8 @@ Transport = Callable[[str, str, dict[str, str], Any, float], dict[str, Any]]
 
 def ollama_plan(text: str, *, model: str, mode: str = "personal", terms: tuple[str, ...] = (),
                 voice: str = "", port: int = 11434, timeout: float = 120,
-                transport: Transport = request_json) -> dict[str, Any]:
+                transport: Transport = request_json, persona: str | None = None,
+                style: str | None = None) -> dict[str, Any]:
     if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,120}", model):
         raise InputError("Ollama 모델 이름이 유효하지 않습니다.")
     if "://" in model or any(part in {"..", "."} for part in model.split("/")):
@@ -66,7 +67,7 @@ def ollama_plan(text: str, *, model: str, mode: str = "personal", terms: tuple[s
         raise InputError("이 어댑터는 cloud 모델을 허용하지 않습니다. 로컬 모델을 선택하세요.")
     if type(port) is not int or not 1024 <= port <= 65535:
         raise InputError("Ollama 포트는 1024~65535 범위여야 합니다.")
-    task = prepare(text, mode=mode, terms=terms, voice=voice)
+    task = prepare(text, mode=mode, terms=terms, voice=voice, persona=persona, style=style)
     instruction = task.pop("instruction")
     task.pop("output_schema")
     schema = proposal_schema()

@@ -141,10 +141,20 @@ class ModelAdapterTests(unittest.TestCase):
     def test_claude_command_removes_mcp_and_builtin_tools(self):
         command = _command(CLIInfo('claude', ('claude',)), Path(tempfile.gettempdir()), None)
         self.assertEqual(command[command.index('--tools')+1], '')
-        self.assertEqual(command[command.index('--disallowedTools')+1], '*')
-        self.assertIn('--bare', command)
+        # No user/project/local settings: no hooks, plugins or CLAUDE.md.
+        self.assertEqual(command[command.index('--setting-sources')+1], '')
+        self.assertIn('--disable-slash-commands', command)
         self.assertIn('--strict-mcp-config', command)
         self.assertIn('--no-session-persistence', command)
+        self.assertFalse(any(arg.startswith('--dangerously') for arg in command))
+
+    def test_claude_command_keeps_subscription_login_and_structured_output(self):
+        # --bare reads only ANTHROPIC_API_KEY, which _environment() removes; a '*' deny
+        # rule also blocks the StructuredOutput tool behind --json-schema.
+        command = _command(CLIInfo('claude', ('claude',)), Path(tempfile.gettempdir()), None)
+        self.assertNotIn('--bare', command)
+        self.assertNotIn('--disallowedTools', command)
+        self.assertIn('--json-schema', command)
 
     def test_inherited_billable_keys_are_not_sent_to_the_cli(self):
         with patch.dict(os.environ, {'OPENAI_API_KEY':'fixture', 'ANTHROPIC_API_KEY':'fixture', 'PANGRAM_API_KEY':'fixture'}):

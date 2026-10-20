@@ -8,10 +8,13 @@
 <section class="toolbar" aria-label="윤문 설정">
 <label class="field">윤문·분석 모델<select id="backend"><option value="codex">Codex</option><option value="claude">Claude Code</option></select></label>
 <label class="field">편집 기준<select id="mode"><option value="personal">자연스럽게</option><option value="publish">필자의 말투 유지</option><option value="technical">기술 문서</option><option value="preserve">원문 보존</option></select></label>
+<label class="field">편집자 페르소나 · 개입 강도<select id="persona" aria-describedby="persona-summary">__PERSONA_OPTIONS__</select></label>
+<label class="field">문법 스타일<select id="style" aria-describedby="persona-summary">__STYLE_OPTIONS__</select></label>
 <details class="model-setting"><summary>모델 지정</summary><label class="field">모델 이름 <input id="model" maxlength="120" placeholder="비우면 CLI 기본 모델" aria-label="모델 이름"></label></details>
 <span id="connection" class="connection" role="status">모델 연결을 확인하고 있습니다…</span>
 <button id="example" class="secondary">예시 체험</button>
 </section>
+<p id="persona-summary" class="persona-summary" aria-live="polite"></p>
 <div id="permission" class="permission"><label class="check"><input id="model-consent" type="checkbox"><span>선택한 모델 서비스로 분석·윤문할 원문과 수정본을 전송하는 데 동의합니다.</span></label><p>설치된 CLI의 로그인을 사용하며, 현재 채팅과 별도의 새 요청입니다. 윤문과 AI 문체 분석은 각각 실행하며, 글은 OpenAI 또는 Anthropic 서버에서 처리되고 계정 사용량이 소모됩니다.</p></div>
 <div class="workbar"><div><span class="step-label">01 / 글 다듬기</span><span id="demo-badge" class="demo-badge" hidden>예시 · 저장된 편집안 · 모델 요청 없음</span></div><div class="run-actions"><button id="analyze" class="quiet">로컬 규칙 분석</button><button id="cancel" class="secondary" hidden>요청 취소</button><button id="rewrite" class="primary" disabled>윤문하기 <span aria-hidden="true">↗</span></button></div></div>
 <p id="status" class="status" role="status" aria-live="polite">글을 붙여 넣거나 예시를 열어 시작하세요.</p>

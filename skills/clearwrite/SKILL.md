@@ -7,7 +7,7 @@ description: >-
   edit source code, fabricate facts, or silently rewrite every response.
 license: MIT
 metadata:
-  version: "0.3.1"
+  version: "0.4.0"
 ---
 
 # ClearWrite · 맑은글
@@ -42,10 +42,24 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
 
 1. 사용자 원문을 UTF-8 파일에 그대로 보관한다. 원본을 덮어쓰지 않는다. 가능하면 작업 폴더의 `.clearwrite-runs/` 아래에 실행별 폴더를 만든다. 이미 있는 파일은 교체하지 않는다. 입력은 최대 12,000자다. 긴 글은 문단별 작업을 사용자에게 알리고 처리한다. 나눠 처리한 경우 문서 전체 의미가 검증됐다고 주장하지 않는다.
 2. `references/editorial_rules.md`를 읽고 사용 목적을 `personal`, `publish`, `technical`, `preserve` 중 정한다. 특별한 요구가 없으면 `personal`이다. 역사적 문학·직접 인용·정확한 원문 보관은 `preserve`를 우선한다.
+   사용자가 개입 강도나 말투를 요청하면 편집자 페르소나를 고른다. 요청이 없으면 `editor`다. `task.json`의 `persona`와 지시문에 적힌 범위만큼만 고친다.
+
+   | 페르소나 | 강도 | 하는 일 | 변경 한도·적용 |
+   | --- | --- | --- | --- |
+   | `proofreader` 꼼꼼한 교정자 | 가볍게 | 맞춤법·띄어쓰기·조사·이중 피동만 | 15% · atomic |
+   | `editor` 담백한 편집자 | 보통 | 말투 유지, 반복·상투적 예고 정리 (기본) | 35% · atomic |
+   | `formal` 격식 있는 보고자 | 보통 · 말투 변경 | 합니다체 통일, 구어·수사 의문 정리 | 50% · safe-subset |
+   | `columnist` 칼럼니스트 | 적극적으로 | 관점 유지, 문장 재구성·리듬·군더더기 삭제 | 50% · safe-subset |
+   | `plain` 쉬운 말 해설가 | 적극적으로 | 긴 문장 나누기, 쉬운 낱말 | 50% · safe-subset |
+   | `friendly` 다정한 안내자 | 적극적으로 · 말투 변경 | 해요체 통일 | 50% · safe-subset |
+
+   종결어미 통일은 페르소나와 별도로 `--style`로 정한다: `keep`(원문 유지), `hamnida`(합니다체), `haeyo`(해요체), `handa`(한다체). 비우면 `formal`은 합니다체, `friendly`는 해요체, 나머지는 keep이다. 스타일을 바꾸면 변경 한도는 최소 35%, 적용은 safe-subset이며 `report.json`의 `style_conformance`로 목표 어미 일치율을 확인한다. 일치율은 어미 규칙 판정이므로 문법 검증으로 표현하지 않는다.
+
+   말투를 바꾸는 페르소나와 스타일은 사용자가 명시적으로 고른 경우에만 쓴다. 어떤 페르소나도 사실·수치·부정·조건·주장 강도를 바꾸거나 경험을 지어내도록 허용하지 않는다.
 3. 아래 명령으로 분석·보호 구간·해시·제안 스키마를 얻는다. 원문 파일명과 출력은 실제 작업 경로로 지정한다.
 
 ```text
-python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" --mode personal --proposals -o "task.json"
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" --mode personal --persona editor --style keep --proposals -o "task.json"
 ```
 
 4. `task.json`을 읽고 **현재 모델**로 편집 제안 `proposals.json`을 작성한다. 규칙을 단어 금지 목록처럼 적용하지 말고 문맥을 판단한다. 목표는 탐지 점수가 아니라 전달력이다. `original`은 원문에 정확히 한 번 나타나는 문자열이어야 한다. 반복 문구라면 앞뒤 문맥을 더 포함한다. `replacement`, `reason`, `rule`도 문자열로 쓴다. 실제 원문 해시를 그대로 사용한다. 아래는 형식 예시이며 해시를 만들어 사용하면 안 된다.
@@ -68,10 +82,12 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" 
 5. 제안을 실제 엔진에 적용한다. 스크립트가 모호한 위치·숫자 변조·보호 구간 수정·과도한 변경을 차단한다.
 
 ```text
-python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" -o "edited.txt" --report "report.json"
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" --persona editor --style keep -o "edited.txt" --report "report.json"
 ```
 
-6. `report.json`과 결과를 읽는다. `blocked`이면 결과는 원문이다. 특히 `excessive_local_compression` / `excessive_document_compression`은 문장을 과도하게 줄였다는 뜻이므로 **정보를 삭제하지 말고 자연스럽게 다시 서술**한다. 실패한 편집을 검토하고 해당 제안만 제거하거나 원문의 사실 표현을 유지해 한 번 수정한다. 점수를 낮추기 위해 무한 재시도하지 않는다. 기본 35% 변경 한도와 긴 글의 최소 분량 85% 기준을 몰래 완화하지 않는다. 분량은 공백 제외 글자 수로 계산하며, 단일 문장·문단 축약에도 별도 기준이 적용된다. 주체·인과·예외가 빠졌는지는 모델이 마지막으로 원문과 대조하되, 이 검토를 독립 검증으로 표현하지 않는다.
+`--persona`와 `--style`은 `prepare`와 같은 값을 쓴다. 변경 한도와 적용 방식(atomic/safe-subset)이 페르소나를 따르며, 결과의 `edit_budget`에 기록된다. safe-subset은 검사에 걸린 제안만 빼고 나머지를 적용하므로 `rejected_edits`를 사용자에게 알린다.
+
+6. `report.json`과 결과를 읽는다. `blocked`이면 결과는 원문이다. 특히 `excessive_local_compression` / `excessive_document_compression`은 문장을 과도하게 줄였다는 뜻이므로 **정보를 삭제하지 말고 자연스럽게 다시 서술**한다. 실패한 편집을 검토하고 해당 제안만 제거하거나 원문의 사실 표현을 유지해 한 번 수정한다. 점수를 낮추기 위해 무한 재시도하지 않는다. 페르소나가 정한 변경 한도(기본 35%)와 긴 글의 최소 분량 85% 기준을 몰래 완화하지 않는다. 분량은 공백 제외 글자 수로 계산하며, 단일 문장·문단 축약에도 별도 기준이 적용된다. 주체·인과·예외가 빠졌는지는 모델이 마지막으로 원문과 대조하되, 이 검토를 독립 검증으로 표현하지 않는다.
 7. 기본 응답은 윤문 결과와 꼭 필요한 한두 문장의 검수 메모다. 사용자가 원할 때만 전체 진단을 보여준다. 파일을 만들었다면 실제 파일 링크를 제공한다. 수치에는 **문체 후보 점수, AI 작성 확률 아님**을 표시한다. `semantic_equivalence: not_established`는 검사 오류가 아니라 한계 고지다.
 
 ## 빠른 로컬 모드
