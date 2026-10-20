@@ -4,7 +4,7 @@
 
 **어디를 왜 고쳤는지 보여 주는 한국어·영어 윤문 프로그램**
 
-[Windows 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/download/v0.3.1/ClearWrite-0.3.1-Windows-x64.zip) · [사용 설명서](docs/DESKTOP.md) · [English](README.en.md) · [오류 제보](https://github.com/xoxo787/clearwrite/issues)
+[Windows 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/download/v0.4.0/ClearWrite-0.4.0-Windows-x64.zip) · [사용 설명서](docs/DESKTOP.md) · [English](README.en.md) · [오류 제보](https://github.com/xoxo787/clearwrite/issues)
 
 [![Offline tests](https://github.com/xoxo787/clearwrite/actions/workflows/ci.yml/badge.svg)](https://github.com/xoxo787/clearwrite/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-285d4c)](LICENSE)
@@ -70,7 +70,7 @@
 ### Windows에서 사용하기
 
 1. [Codex CLI](https://developers.openai.com/codex/cli/) 또는 [Claude Code](https://code.claude.com/docs/en/overview)를 설치하고 본인 계정으로 로그인합니다. 데스크톱 앱 로그인만으로 CLI가 준비되지는 않습니다.
-2. [Windows x64 ZIP](https://github.com/xoxo787/clearwrite/releases/download/v0.3.1/ClearWrite-0.3.1-Windows-x64.zip)을 내려받아 **전체 압축을 풉니다**.
+2. [Windows x64 ZIP](https://github.com/xoxo787/clearwrite/releases/download/v0.4.0/ClearWrite-0.4.0-Windows-x64.zip)을 내려받아 **전체 압축을 풉니다**.
 3. `ClearWrite/ClearWrite.exe`를 실행합니다. `_internal` 폴더는 실행 파일 옆에 그대로 두세요.
 4. **예시 체험**을 눌러 수정 표시와 이유를 살펴봅니다. 이 버튼은 모델을 호출하지 않습니다.
 5. 글을 입력하고 사용할 모델을 고릅니다. 전송에 동의한 뒤 **윤문하기**를 누릅니다.

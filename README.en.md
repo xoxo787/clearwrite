@@ -4,7 +4,7 @@
 
 **See what changed. Understand why. Keep your voice.**
 
-[Download Windows beta](https://github.com/xoxo787/clearwrite/releases/download/v0.3.1/ClearWrite-0.3.1-Windows-x64.zip) · [한국어](README.md) · [Desktop guide](docs/DESKTOP.md) · [Report an issue](https://github.com/xoxo787/clearwrite/issues)
+[Download Windows beta](https://github.com/xoxo787/clearwrite/releases/download/v0.4.0/ClearWrite-0.4.0-Windows-x64.zip) · [한국어](README.md) · [Desktop guide](docs/DESKTOP.md) · [Report an issue](https://github.com/xoxo787/clearwrite/issues)
 
 </div>
 
@@ -46,7 +46,7 @@ The legacy local `ai_style_score` is a separate rule-candidate density, not the 
 
 The interface runs on loopback. Model work is a **new request to the selected CLI's provider**, consuming your own account's usage. Source and accepted output are transmitted only after consent. ClearWrite does not read or copy CLI login files. It restricts tools/MCP/plugins, uses bounded temporary workspaces and supports cancellation. The provider/CLI has its own processing and retention policies.
 
-ClearWrite 0.3.1 uses bounded stdin/stdout/stderr pipes rather than prompt or response files. Only a static response schema is written to its temporary workspace. Completed, failed and cancelled server records expire automatically 15 minutes after completion, including while idle; shutdown clears them too. Text open in the editor and files you explicitly saved are retained. This does not delete older-version leftovers or CLI/provider-owned storage.
+Since 0.3.1, ClearWrite uses bounded stdin/stdout/stderr pipes rather than prompt or response files. Only a static response schema is written to its temporary workspace. Completed, failed and cancelled server records expire automatically 15 minutes after completion, including while idle; shutdown clears them too. Text open in the editor and files you explicitly saved are retained. This does not delete older-version leftovers or CLI/provider-owned storage.
 
 The example, local rule analysis and preserve mode do not call a model. JSON exports contain the original text. Read [SECURITY.md](SECURITY.md) for scope and limitations.
 
