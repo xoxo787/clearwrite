@@ -91,6 +91,19 @@ RULES = (
 )
 COMPILED = [(r, re.compile(r.pattern, re.I if r.lang == "en" else 0)) for r in RULES]
 RULE_INDEX = {r.id: r for r in RULES}
+# Phrases that carry no information of their own. Cutting them is not compression,
+# so the local compression gate measures the rest of the original. Kept deliberately
+# narrow: stock vocabulary such as "seamlessly" can still carry meaning.
+FILLER_RE = tuple(re.compile(p, re.I) for p in (
+    r"\bin today['’]s (?:[\w-]+ )?(?:world|landscape|era|age)\b,?",
+    r"\bit is (?:important to note|worth noting) that\b",
+    r"\bit should be noted that\b",
+    r"\blet['’]s dive in\b[.!]?",
+    r"\bwithout further ado\b,?",
+    r"\bat its core\b,?",
+    r"\bin conclusion\b,?",
+    r"(?:결론적으로|종합적으로 살펴보면|요약하자면),?",
+))
 
 
 def checked_text(text: str, *, allow_empty: bool = False) -> str:
@@ -266,6 +279,26 @@ def local_minimum_retention(visible_original: int, requested: float) -> float:
     return 0.0
 
 
+def filler_adjusted(text: str) -> str:
+    """Drop filler and use the rules' concise equivalents, e.g. 'in order to' -> 'to'."""
+    for pattern in FILLER_RE:
+        text = pattern.sub("", text)
+    for rule, pattern in COMPILED:
+        if rule.replacement is not None:
+            text = pattern.sub(rule.replacement, text)
+    return text
+
+
+def locally_overcompressed(original: str, replacement: str, min_retention: float) -> bool:
+    before, after = visible_length(original), visible_length(replacement)
+    if not before or after / before >= local_minimum_retention(before, min_retention):
+        return False
+    adjusted = visible_length(filler_adjusted(original))
+    if adjusted == before:
+        return True
+    return adjusted > 0 and after / adjusted < local_minimum_retention(adjusted, min_retention)
+
+
 def verify(before: str, after: str, *, terms: tuple[str, ...] = (), max_change: float = .35,
            min_retention: float = DEFAULT_MIN_RETENTION) -> dict[str, Any]:
     checked_text(before)
@@ -301,7 +334,10 @@ def verify(before: str, after: str, *, terms: tuple[str, ...] = (), max_change: 
     before_visible, after_visible = visible_length(before), visible_length(after)
     length_ratio = after_visible / before_visible if before_visible else 1.0
     required_ratio = minimum_retention(before_visible, min_retention)
-    if length_ratio < required_ratio:
+    # Removed filler is not lost information; measure against the filler-free original too.
+    informative_before = visible_length(filler_adjusted(before))
+    informative_ratio = after_visible / informative_before if informative_before else 1.0
+    if length_ratio < required_ratio and informative_ratio < required_ratio:
         failures.append("excessive_document_compression")
         warnings.append("글의 정보를 잃을 만큼 짧아졌을 수 있습니다. 요약하지 말고 설명을 보존해 다시 윤문하세요.")
     if rate > max_change:
@@ -316,6 +352,7 @@ def verify(before: str, after: str, *, terms: tuple[str, ...] = (), max_change: 
             "character_change_rate": round(rate, 6), "change_rate_method": "SequenceMatcher; autojunk for >4000 chars",
             "visible_characters_before": before_visible, "visible_characters_after": after_visible,
             "visible_length_ratio": round(length_ratio, 6), "required_length_ratio": required_ratio,
+            "filler_adjusted_length_ratio": round(informative_ratio, 6),
             "length_policy": "Whitespace-excluded characters, heuristic; not semantic validation",
             "numbers_before": number_signature(before), "numbers_after": number_signature(after),
             "semantic_equivalence": "not_established", "original_sha256": text_hash(before),
@@ -400,9 +437,7 @@ def apply_plan(text: str, plan: dict[str, Any], *, terms: tuple[str, ...] = (), 
             problem = "scope_negation_or_modality_changed"
         elif [x.lower() for x in DIRECTION_RE.findall(edit["original"])] != [x.lower() for x in DIRECTION_RE.findall(edit["replacement"])]:
             problem = "direction_changed"
-        elif (visible_length(edit["original"]) > 0 and
-              visible_length(edit["replacement"]) / visible_length(edit["original"]) <
-              local_minimum_retention(visible_length(edit["original"]), min_retention)):
+        elif locally_overcompressed(edit["original"], edit["replacement"], min_retention):
             problem = "excessive_local_compression"
         if problem:
             rejected.append({"edit": edit, "reason": problem})
@@ -438,10 +473,13 @@ def plan_schema() -> dict[str, Any]:
             "required": ["schema_version", "source_sha256", "edits"]}
 
 
-def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), voice: str = "") -> dict[str, Any]:
+def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), voice: str = "",
+            persona: str | None = None) -> dict[str, Any]:
+    from .personas import get_persona, persona_instruction  # personas imports core
     checked_text(text)
     if not isinstance(mode, str) or mode not in MODES:
         raise InputError("알 수 없는 편집 모드입니다.")
+    selected = get_persona(persona)
     checked_text(voice, allow_empty=True)
     if len(voice) > 3000:
         raise InputError("문체 예시는 3,000자 이하여야 합니다.")
@@ -454,6 +492,7 @@ def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), v
     instruction = (
         "목표: 글의 읽기 부담을 줄이는 최소 편집 계획을 JSON으로 작성한다. "
         "AI 탐지기를 속이거나 점수를 낮추는 것은 목표가 아니다. " + notes[mode] + "\n"
+        + ("" if mode == "preserve" else persona_instruction(selected) + "\n") +
         "윤문은 요약이 아니다. 정보와 뉘앙스, 중요성에 대한 설명, 예시와 논리 연결을 보존한다. "
         "글을 읽기 쉽게 만들기 위해 문장 하나를 짧은 표어로 압축하지 않는다. "
         "다른 문장에서 이미 반복한 말이라도 원래 역할을 검토하고 삭제 대신 자연스럽게 재구성할 수 있다. "
@@ -468,7 +507,7 @@ def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), v
         "원문 해시를 그대로 사용한다. 수정이 불필요하면 edits=[]가 정답이다.\n"
         "완료 기준: 더 읽기 쉬움, 정보 보존, 변경 이유 제시. 확인할 수 없는 사실을 만들어 보완하지 않는다."
     )
-    return {"instruction": instruction, "mode": mode, "source_sha256": text_hash(text),
+    return {"instruction": instruction, "mode": mode, "persona": selected.public(), "source_sha256": text_hash(text),
             "text": text, "voice_sample": voice, "protected_terms": list(terms),
             "protected_spans": [{"start": a, "end": b, "kind": k} for a, b, k in protected_spans(text, terms)],
             "analysis": analyze(text, terms=terms), "output_schema": plan_schema()}

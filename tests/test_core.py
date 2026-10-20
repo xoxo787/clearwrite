@@ -99,6 +99,41 @@ class GateTests(unittest.TestCase):
         self.assertEqual(result['text'],original)
         self.assertEqual(result['rejected_edits'][0]['reason'],'excessive_local_compression')
 
+    def test_cutting_only_filler_is_not_compression(self):
+        cases=[("In today's ever-evolving landscape, it is important to note that remote work",'Remote work'),
+               ('In order to succeed, teams need to utilize','To succeed, teams need to use'),
+               ('결론적으로, 시간 관리는 단순히 시간을 아끼는 것이 아니라 삶을 바꾸는 일입니다.',
+                '시간 관리는 단순히 시간을 아끼는 것이 아니라 삶을 바꾸는 일입니다.')]
+        rest=' Teams that write things down keep decisions, owners and deadlines visible to everyone.'*3
+        for original,replacement in cases:
+            with self.subTest(original=original):
+                text=original+rest
+                result=apply_plan(text,edit_plan(text,original,replacement))
+                self.assertEqual(result['status'],'edited',result['verification']['failures'])
+
+    def test_filler_does_not_excuse_compressing_the_rest(self):
+        original='In conclusion, organizations that patiently rebuild their review process around written updates will adapt.'
+        result=apply_plan(original,edit_plan(original,original,'Organizations will adapt.'),max_change=.5)
+        self.assertEqual(result['rejected_edits'][0]['reason'],'excessive_local_compression')
+
+    def test_filler_exemption_keeps_meaning_gates(self):
+        original="In today's world, at least 12 teams could not move."
+        result=apply_plan(original,edit_plan(original,original,'12 teams moved.'),max_change=.5)
+        self.assertEqual(result['status'],'blocked')
+        self.assertNotEqual(result['rejected_edits'][0]['reason'],'excessive_local_compression')
+
+    def test_filler_does_not_excuse_document_compression(self):
+        original=('In conclusion, it is important to note that teams compare each result and record the premises. '
+                  'They also check why the numbers differ before they decide. ')*4
+        shortened='Teams compare each result. '*4
+        report=verify(original,shortened,max_change=.5)
+        self.assertIn('excessive_document_compression',report['failures'])
+        self.assertLess(report['filler_adjusted_length_ratio'],report['required_length_ratio'])
+
+    def test_stock_vocabulary_is_not_treated_as_filler(self):
+        original='organizations that seamlessly embrace this multifaceted shift'
+        self.assertEqual(filler_adjusted(original),original)
+
     def test_long_text_compression_is_blocked(self):
         original='자료를 조사한 뒤 각각의 결과를 비교합니다. 수치와 전제는 그대로 기록하고 그 차이가 생긴 이유도 확인합니다. '*4
         shortened='자료를 조사한 뒤 각각의 결과를 비교합니다. '*2

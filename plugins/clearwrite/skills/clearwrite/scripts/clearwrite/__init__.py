@@ -1,4 +1,4 @@
 """ClearWrite: readability-oriented editing with explicit uncertainty."""
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 from .core import analyze, apply_plan, make_plan, prepare, verify
 __all__ = ["analyze", "apply_plan", "make_plan", "prepare", "verify"]

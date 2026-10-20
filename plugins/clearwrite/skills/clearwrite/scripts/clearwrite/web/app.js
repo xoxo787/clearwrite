@@ -8,7 +8,8 @@
   const errors = {numbers_units_or_order_changed:'숫자·단위 변경', protected_content_changed:'인용·보호 구간 변경',
     protected_span_overlap:'보호 구간과 겹침', excessive_local_compression:'일부 문장의 과도한 축약',
     excessive_document_compression:'글 전체의 과도한 축약', change_budget_exceeded:'변경량 초과',
-    scope_negation_or_modality_changed:'부정·조건·가능성 변경', atomic_plan_rejected:'전체 제안 적용 취소'};
+    scope_negation_or_modality_changed:'부정·조건·가능성 변경', atomic_plan_rejected:'전체 제안 적용 취소',
+    direction_changed:'증감 방향 변경', comparison_operator_changed:'비교 표현 변경'};
   const count = text => Array.from(text).length;
   const current = () => state.result && state.generatedAt === state.generation && state.result.source_text === $('input').value;
   const currentStyle = () => state.style && state.style.source_text === $('input').value &&
@@ -30,6 +31,7 @@
     $('example').disabled=state.busy || state.stopped;
     $('backend').disabled=state.busy || state.stopped;
     $('mode').disabled=state.busy || state.stopped;
+    $('persona').disabled=state.busy || state.stopped || $('mode').value==='preserve';
     $('model').disabled=state.busy || state.stopped;
     $('cancel').hidden=!state.busy;
     $('style-analyze').disabled=state.busy || state.stopped || !ready();
@@ -41,6 +43,13 @@
     $('next-change').disabled=!navigable;
   }
   function busy(value) { state.busy=value; actions(); }
+  function personaSummary() {
+    const option=$('persona').selectedOptions[0];
+    const summary=$('persona-summary'); summary.replaceChildren();
+    if ($('mode').value==='preserve') { summary.textContent='원문 보존 기준에서는 페르소나를 적용하지 않습니다.'; return; }
+    const name=document.createElement('strong'); name.textContent=option.textContent;
+    summary.append(name,document.createTextNode(' — '+option.dataset.summary+' 숫자·부정·인용 보존 검사는 모든 페르소나에 똑같이 적용됩니다.'));
+  }
   function showOriginal(editing) {
     state.editing=editing;
     $('input').hidden=!editing;
@@ -125,19 +134,20 @@
     $('demo-badge').hidden=!result.demonstration;
     segments($('original-diff'),result.before_segments); segments($('result'),result.after_segments);
     reasons(result); $('edit-toggle').hidden=false; showOriginal(false);
-    $('result-count').textContent=`${count(result.text).toLocaleString()}자 · ${label[result.backend]||'로컬 검사'}`;
+    $('result-count').textContent=`${count(result.text).toLocaleString()}자 · ${label[result.backend]||'로컬 검사'}${result.persona&&result.backend!=='preserve'?' · '+result.persona.label:''}`;
+    const dropped=result.status==='edited'?result.rejected_edits.length:0;
     $('change-count').textContent=`${result.changes.length}곳`;
     const stats=result.change_statistics;
     $('change-rate').textContent=`${stats.rate_percent.toFixed(1)}%`;
     $('change-rate-detail').textContent=`원문 ${stats.original_characters.toLocaleString()}자 → 수정본 ${stats.result_characters.toLocaleString()}자 · 삭제·교체 ${stats.removed_characters}자 / 추가·대체 ${stats.added_characters}자`;
     const verification=result.verification;
     $('verification').textContent=verification.passed?
-      `기계적 보존 검사 통과 · 원문 대비 분량 ${(verification.visible_length_ratio*100).toFixed(1)}% (공백 제외) · 의미와 사실은 마지막으로 대조하세요.`:
+      `기계적 보존 검사 통과${dropped?` · 제안 ${dropped}곳은 검사에 걸려 제외`:''} · 원문 대비 분량 ${(verification.visible_length_ratio*100).toFixed(1)}% (공백 제외) · 의미와 사실은 마지막으로 대조하세요.`:
       `적용 차단 · ${verification.failures.map(code=>errors[code]||code).join(' · ')} · 원문을 유지했습니다.`;
     $('details').textContent=JSON.stringify(result,null,2);
     $('analysis-summary').textContent=`로컬 규칙 후보 점수 ${result.before.ai_style_score} → ${result.after.ai_style_score} / 100. 모델 문체 점수와 별개의 편집 후보 지표입니다.`;
     message(result.status==='blocked'?'보존 검사에 걸려 원문을 유지했습니다. 수정 제안과 차단 이유를 확인하세요.':
-      (result.changes.length?`${result.changes.length}곳을 다듬었습니다. 형광펜 구간을 선택해 이유를 확인하세요.`:'수정할 필요가 없는 글로 판단해 원문을 유지했습니다.'),result.status==='blocked'?'error':'success');
+      (result.changes.length?`${result.changes.length}곳을 다듬었습니다.${dropped?` 다른 제안 ${dropped}곳은 보존 검사에 걸려 적용하지 않았습니다.`:''} 형광펜 구간을 선택해 이유를 확인하세요.`:'수정할 필요가 없는 글로 판단해 원문을 유지했습니다.'),result.status==='blocked'?'error':'success');
     actions(); if (result.changes.length) selectChange(result.changes[0].id);
   }
   function resetStyle() {
@@ -188,7 +198,9 @@
   });
   $('edit-toggle').onclick=() => showOriginal(!state.editing);
   $('backend').onchange=() => { $('model-consent').checked=false; connection(); };
-  $('mode').onchange=actions;
+  $('mode').onchange=() => { personaSummary(); actions(); };
+  $('persona').onchange=personaSummary;
+  personaSummary();
   $('model-consent').onchange=() => $('permission').classList.remove('attention');
   function connection() {
     const item=state.backends.find(item=>item.id===$('backend').value);
@@ -224,7 +236,7 @@
     const generation=state.generation;
     message($('mode').value==='preserve'?'로컬에서 원문 보존 검사 중…':`${label[$('backend').value]}에서 글을 다듬고 있습니다…`,'loading');
     await job({action:'rewrite',text:$('input').value,backend:$('backend').value,mode:$('mode').value,
-      model:$('model').value.trim(),allow_model:$('model-consent').checked},generation,result=>render(result,generation));
+      persona:$('persona').value,model:$('model').value.trim(),allow_model:$('model-consent').checked},generation,result=>render(result,generation));
     $('model-consent').checked=false;
   };
   $('cancel').onclick=async() => {
