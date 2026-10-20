@@ -34,7 +34,7 @@ Claude Code는 `--backend claude` / `--provider claude`를 사용합니다. `det
 
 ## 편집 기준과 검사
 
-`--mode personal/publish/technical/preserve`, `--term`, `--max-change`, `--policy atomic/safe-subset`을 지원합니다. 일반적인 윤문은 기본 설정을 사용하세요. `preserve`는 원문을 유지하고 모델 윤문 요청을 하지 않습니다.
+`--mode personal/publish/technical/preserve`, `--persona proofreader/editor/formal/columnist/plain/friendly`, `--term`, `--max-change`, `--policy atomic/safe-subset`을 지원합니다. 일반적인 윤문은 기본 설정을 사용하세요. `--persona`는 개입 강도와 말투를 정하고 변경 한도·적용 방식의 기본값도 바꿉니다. `--max-change`/`--policy`를 직접 지정하면 그 값이 우선합니다. 내장 규칙(`--backend builtin`)은 `proofreader`와 `editor`만 받습니다. `preserve`는 원문을 유지하고 모델 윤문 요청을 하지 않습니다.
 
 기본 변경 예산은 문자 유사도 35%이며 상한은 50%입니다. 공백 제외 100자 이상의 글은 기본 분량 85%, 50~99자는 70% 이상을 보존하도록 검사합니다. 개별 편집의 과도한 축약도 검사합니다. 이는 의미 보존의 증명이 아닙니다. 명시적으로 요약을 요청한 경우에만 `--min-retention 0`을 사용할 수 있습니다. [검사 원리](ARCHITECTURE.md)
 

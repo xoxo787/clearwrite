@@ -111,7 +111,8 @@ def cli_info(backend: str) -> CLIInfo | None:
                                         env=_environment(), creationflags=flags, check=False)
         version = version_result.stdout[:150].decode('utf-8', errors='replace').strip()
         required = ('--ignore-user-config', '--output-schema', '--ephemeral') if backend == 'codex' else (
-            '--tools', '--bare', '--json-schema', '--no-session-persistence', '--strict-mcp-config')
+            '--tools', '--json-schema', '--no-session-persistence', '--strict-mcp-config',
+            '--setting-sources', '--disable-slash-commands')
         supported = help_result.returncode == 0 and all(x in help_text for x in required)
         if supported and backend == 'codex':
             features = subprocess.run([*argv, 'features', 'list'], capture_output=True, timeout=8,
@@ -150,9 +151,13 @@ def _command(info: CLIInfo, directory: Path, model: str | None, schema: dict | N
                         'approval_policy="never"'):
             argv += ['-c', setting]
     else:
-        argv = [*info.argv, '--bare', '--print', '--output-format', 'json',
+        # --bare accepts only ANTHROPIC_API_KEY, which _environment() removes, so
+        # subscription logins failed. An empty setting source list skips user
+        # hooks, plugins and CLAUDE.md instead. A '*' deny rule would also block
+        # the StructuredOutput tool that --json-schema relies on.
+        argv = [*info.argv, '--print', '--output-format', 'json',
                 '--json-schema', json.dumps(schema or proposal_schema(), ensure_ascii=True, separators=(',', ':')),
-                '--tools', '', '--disallowedTools', '*', '--strict-mcp-config',
+                '--tools', '', '--setting-sources', '', '--disable-slash-commands', '--strict-mcp-config',
                 '--mcp-config', '{"mcpServers":{}}', '--no-session-persistence']
     if model:
         argv += ['--model', model]
@@ -292,7 +297,7 @@ def _run(info: CLIInfo, prompt: str, directory: Path, model: str | None,
 def model_plan(text: str, *, backend: str, allow_model: bool = False, model: str | None = None,
                mode: str = 'personal', terms: tuple[str, ...] = (), voice: str = '', timeout: float = 180,
                cancel: threading.Event | None = None,
-               runner: Callable | None = None) -> dict:
+               runner: Callable | None = None, persona: str | None = None) -> dict:
     if backend not in BACKENDS:
         raise InputError('Codex 또는 Claude Code를 선택하세요.')
     if allow_model is not True:
@@ -301,7 +306,7 @@ def model_plan(text: str, *, backend: str, allow_model: bool = False, model: str
         raise InputError('모델 이름이 유효하지 않습니다.')
     if type(timeout) not in (int, float) or not 1 <= timeout <= 300:
         raise InputError('모델 제한 시간은 1~300초여야 합니다.')
-    task = prepare(text, mode=mode, terms=terms, voice=voice)
+    task = prepare(text, mode=mode, terms=terms, voice=voice, persona=persona)
     if mode == 'preserve':
         return {'schema_version': '1.0', 'source_sha256': task['source_sha256'], 'edits': []}
     info = cli_info(backend)

@@ -31,6 +31,7 @@ This is an unsigned portable beta. Do not disable OS security protections to run
 - Model style scores with actual quotation evidence, checked against the input.
 - Actual applied-character change rates and counts.
 - TXT export and a JSON report containing source, edits, checks and completed assessments.
+- Editor personas that set intervention strength and register: `proofreader` (light), `editor` (default), `formal`, `columnist`, `plain` and `friendly`. Stronger personas allow up to 50% change and keep passing edits when one is gated; every persona keeps the same preservation checks.
 
 ## What the scores mean
 
@@ -57,6 +58,7 @@ git clone https://github.com/xoxo787/clearwrite.git
 cd clearwrite
 python rewrite.py
 python rewrite.py rewrite input.txt --backend codex --allow-model -o edited.txt --report report.json
+python rewrite.py rewrite input.txt --backend claude --allow-model --persona columnist -o edited.txt
 python rewrite.py detect input.txt --provider codex --candidate edited.txt --allow-model -o style.json
 python rewrite.py analyze input.txt
 ```

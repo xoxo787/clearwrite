@@ -127,6 +127,21 @@ Pangram 같은 별도 탐지 서비스의 API 키는 필요하지 않습니다. 
 
 ClearWrite는 글의 뜻과 말투를 유지하면서 **필요한 만큼 다듬는 것**을 목표로 합니다. 수정안이 가리키는 원문이 맞는지, 숫자·단위·일부 조건 표현이 바뀌지 않았는지 살핍니다. 인용문·코드·보호 용어를 지키고 글이 지나치게 줄어들지 않는지도 검사합니다. 허용된 변경량이나 분량 보존 기준을 넘는 수정안은 차단할 수 있습니다.
 
+### 편집자 페르소나로 개입 강도 고르기
+
+얼마나 과감하게, 어떤 말투로 고칠지는 **편집자 페르소나**로 정합니다. 화면의 `편집자 페르소나` 목록이나 CLI의 `--persona`로 선택합니다.
+
+| 페르소나 | 개입 강도 | 하는 일 |
+| --- | --- | --- |
+| 꼼꼼한 교정자 `proofreader` | 가볍게 | 맞춤법·띄어쓰기·조사·이중 피동만 고칩니다. |
+| 담백한 편집자 `editor` (기본) | 보통 | 말투를 지키며 반복과 상투적 예고를 다듬습니다. |
+| 격식 있는 보고자 `formal` | 보통 · 말투 변경 | 합니다체로 맞추고 구어·수사 의문을 정리합니다. |
+| 칼럼니스트 `columnist` | 적극적으로 | 관점은 지키되 문장을 재구성해 흐름을 살립니다. |
+| 쉬운 말 해설가 `plain` | 적극적으로 | 긴 문장을 나누고 어려운 낱말을 쉬운 말로 바꿉니다. |
+| 다정한 안내자 `friendly` | 적극적으로 · 말투 변경 | 해요체로 바꿔 부드럽게 씁니다. |
+
+강도가 높을수록 허용 변경량이 커집니다(교정자 15%, 기본 35%, 나머지 50%). 칼럼니스트·쉬운 말·말투 변경 페르소나는 검사에 걸린 제안만 빼고 나머지를 적용합니다. 어느 페르소나든 숫자·부정·조건·인용 보존 검사는 똑같이 적용되고, 새 사실을 더하지 않습니다.
+
 이 검사가 모든 의미 변화나 사실 왜곡을 찾아내지는 못합니다. 완성된 글을 원문과 대조해 확인해 주세요. 어떤 기준을 쓰는지와 검사의 한계는 [구조와 판단 기준](docs/ARCHITECTURE.md)에서 볼 수 있습니다.
 
 ## 모델 연결과 글의 보관
@@ -148,6 +163,9 @@ ClearWrite는 글의 뜻과 말투를 유지하면서 **필요한 만큼 다듬�
 ```sh
 # 로그인된 Codex CLI로 윤문
 python rewrite.py rewrite input.txt --backend codex --allow-model -o edited.txt --report report.json
+
+# 페르소나로 개입 강도·말투 선택 (proofreader / editor / formal / columnist / plain / friendly)
+python rewrite.py rewrite input.txt --backend claude --allow-model --persona columnist -o edited.txt
 
 # 원문과 수정본의 문체를 함께 평가
 python rewrite.py detect input.txt --provider codex --candidate edited.txt --allow-model -o style.json
