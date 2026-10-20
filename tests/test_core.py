@@ -130,6 +130,17 @@ class GateTests(unittest.TestCase):
         self.assertIn('excessive_document_compression',report['failures'])
         self.assertLess(report['filler_adjusted_length_ratio'],report['required_length_ratio'])
 
+    def test_adverb_boda_is_not_a_comparison(self):
+        original='아침에 할 일을 정리하면 하루를 보다 효율적으로 보낼 수 있습니다.'
+        result=apply_plan(original,edit_plan(original,'보다 효율적으로','더 효율적으로'))
+        self.assertEqual(result['status'],'edited',result['rejected_edits'])
+
+    def test_particle_boda_comparison_is_still_guarded(self):
+        original='올해 매출은 전년보다 높았고 팀은 계획을 그대로 유지했습니다.'
+        result=apply_plan(original,edit_plan(original,'전년보다 높았고','전년과 비슷했고'))
+        self.assertEqual(result['status'],'blocked')
+        self.assertEqual(result['rejected_edits'][0]['reason'],'scope_negation_or_modality_changed')
+
     def test_stock_vocabulary_is_not_treated_as_filler(self):
         original='organizations that seamlessly embrace this multifaceted shift'
         self.assertEqual(filler_adjusted(original),original)
