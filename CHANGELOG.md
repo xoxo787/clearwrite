@@ -12,6 +12,8 @@ The compression gates no longer count information-free filler as lost content. C
 
 The scope gate no longer treats the standalone adverb "보다" (보다 효율적으로, "more") as a comparison, which blocked "보다 → 더" and some sentence-ending conversions. The attached particle (전년보다) is still guarded.
 
+Redesigned the editor as a proofreading sheet: cool paper with a blue-pencil accent, settings gathered into one band, Myeongjo serif for the text being edited and the wordmark, blue highlighter marks with pencil underlines, margin-note styling for edit reasons, and one ruled panel instead of three cards for style scores. Only local fonts are referenced, so the CSP is unchanged. Element IDs and editor behavior are unchanged.
+
 Web assets are pinned to LF so bundle hashes match across platforms.
 
 ## 0.3.1 — 2026-10-18
