@@ -53,11 +53,13 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
    | `plain` 쉬운 말 해설가 | 적극적으로 | 긴 문장 나누기, 쉬운 낱말 | 50% · safe-subset |
    | `friendly` 다정한 안내자 | 적극적으로 · 말투 변경 | 해요체 통일 | 50% · safe-subset |
 
-   말투를 바꾸는 페르소나는 사용자가 명시적으로 고른 경우에만 쓴다. 어떤 페르소나도 사실·수치·부정·조건·주장 강도를 바꾸거나 경험을 지어내도록 허용하지 않는다.
+   종결어미 통일은 페르소나와 별도로 `--style`로 정한다: `keep`(원문 유지), `hamnida`(합니다체), `haeyo`(해요체), `handa`(한다체). 비우면 `formal`은 합니다체, `friendly`는 해요체, 나머지는 keep이다. 스타일을 바꾸면 변경 한도는 최소 35%, 적용은 safe-subset이며 `report.json`의 `style_conformance`로 목표 어미 일치율을 확인한다. 일치율은 어미 규칙 판정이므로 문법 검증으로 표현하지 않는다.
+
+   말투를 바꾸는 페르소나와 스타일은 사용자가 명시적으로 고른 경우에만 쓴다. 어떤 페르소나도 사실·수치·부정·조건·주장 강도를 바꾸거나 경험을 지어내도록 허용하지 않는다.
 3. 아래 명령으로 분석·보호 구간·해시·제안 스키마를 얻는다. 원문 파일명과 출력은 실제 작업 경로로 지정한다.
 
 ```text
-python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" --mode personal --persona editor --proposals -o "task.json"
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" --mode personal --persona editor --style keep --proposals -o "task.json"
 ```
 
 4. `task.json`을 읽고 **현재 모델**로 편집 제안 `proposals.json`을 작성한다. 규칙을 단어 금지 목록처럼 적용하지 말고 문맥을 판단한다. 목표는 탐지 점수가 아니라 전달력이다. `original`은 원문에 정확히 한 번 나타나는 문자열이어야 한다. 반복 문구라면 앞뒤 문맥을 더 포함한다. `replacement`, `reason`, `rule`도 문자열로 쓴다. 실제 원문 해시를 그대로 사용한다. 아래는 형식 예시이며 해시를 만들어 사용하면 안 된다.
@@ -80,10 +82,10 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" 
 5. 제안을 실제 엔진에 적용한다. 스크립트가 모호한 위치·숫자 변조·보호 구간 수정·과도한 변경을 차단한다.
 
 ```text
-python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" --persona editor -o "edited.txt" --report "report.json"
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" --persona editor --style keep -o "edited.txt" --report "report.json"
 ```
 
-`--persona`는 `prepare`와 같은 값을 쓴다. 변경 한도와 적용 방식(atomic/safe-subset)이 페르소나를 따르며, 결과의 `edit_budget`에 기록된다. safe-subset은 검사에 걸린 제안만 빼고 나머지를 적용하므로 `rejected_edits`를 사용자에게 알린다.
+`--persona`와 `--style`은 `prepare`와 같은 값을 쓴다. 변경 한도와 적용 방식(atomic/safe-subset)이 페르소나를 따르며, 결과의 `edit_budget`에 기록된다. safe-subset은 검사에 걸린 제안만 빼고 나머지를 적용하므로 `rejected_edits`를 사용자에게 알린다.
 
 6. `report.json`과 결과를 읽는다. `blocked`이면 결과는 원문이다. 특히 `excessive_local_compression` / `excessive_document_compression`은 문장을 과도하게 줄였다는 뜻이므로 **정보를 삭제하지 말고 자연스럽게 다시 서술**한다. 실패한 편집을 검토하고 해당 제안만 제거하거나 원문의 사실 표현을 유지해 한 번 수정한다. 점수를 낮추기 위해 무한 재시도하지 않는다. 페르소나가 정한 변경 한도(기본 35%)와 긴 글의 최소 분량 85% 기준을 몰래 완화하지 않는다. 분량은 공백 제외 글자 수로 계산하며, 단일 문장·문단 축약에도 별도 기준이 적용된다. 주체·인과·예외가 빠졌는지는 모델이 마지막으로 원문과 대조하되, 이 검토를 독립 검증으로 표현하지 않는다.
 7. 기본 응답은 윤문 결과와 꼭 필요한 한두 문장의 검수 메모다. 사용자가 원할 때만 전체 진단을 보여준다. 파일을 만들었다면 실제 파일 링크를 제공한다. 수치에는 **문체 후보 점수, AI 작성 확률 아님**을 표시한다. `semantic_equivalence: not_established`는 검사 오류가 아니라 한계 고지다.

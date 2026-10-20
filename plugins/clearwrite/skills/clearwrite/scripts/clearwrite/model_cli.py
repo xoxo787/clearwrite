@@ -297,7 +297,8 @@ def _run(info: CLIInfo, prompt: str, directory: Path, model: str | None,
 def model_plan(text: str, *, backend: str, allow_model: bool = False, model: str | None = None,
                mode: str = 'personal', terms: tuple[str, ...] = (), voice: str = '', timeout: float = 180,
                cancel: threading.Event | None = None,
-               runner: Callable | None = None, persona: str | None = None) -> dict:
+               runner: Callable | None = None, persona: str | None = None,
+               style: str | None = None) -> dict:
     if backend not in BACKENDS:
         raise InputError('Codex 또는 Claude Code를 선택하세요.')
     if allow_model is not True:
@@ -306,7 +307,7 @@ def model_plan(text: str, *, backend: str, allow_model: bool = False, model: str
         raise InputError('모델 이름이 유효하지 않습니다.')
     if type(timeout) not in (int, float) or not 1 <= timeout <= 300:
         raise InputError('모델 제한 시간은 1~300초여야 합니다.')
-    task = prepare(text, mode=mode, terms=terms, voice=voice, persona=persona)
+    task = prepare(text, mode=mode, terms=terms, voice=voice, persona=persona, style=style)
     if mode == 'preserve':
         return {'schema_version': '1.0', 'source_sha256': task['source_sha256'], 'edits': []}
     info = cli_info(backend)

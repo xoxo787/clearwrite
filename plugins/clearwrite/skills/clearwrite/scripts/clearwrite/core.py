@@ -474,12 +474,15 @@ def plan_schema() -> dict[str, Any]:
 
 
 def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), voice: str = "",
-            persona: str | None = None) -> dict[str, Any]:
-    from .personas import get_persona, persona_instruction  # personas imports core
+            persona: str | None = None, style: str | None = None) -> dict[str, Any]:
+    from .personas import get_persona, persona_instruction, resolve_style  # personas imports core
+    from .styles import style_instruction
     checked_text(text)
     if not isinstance(mode, str) or mode not in MODES:
         raise InputError("알 수 없는 편집 모드입니다.")
     selected = get_persona(persona)
+    grammar = resolve_style(selected, style)
+    grammar_note = "" if mode == "preserve" else style_instruction(grammar)
     checked_text(voice, allow_empty=True)
     if len(voice) > 3000:
         raise InputError("문체 예시는 3,000자 이하여야 합니다.")
@@ -492,7 +495,8 @@ def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), v
     instruction = (
         "목표: 글의 읽기 부담을 줄이는 최소 편집 계획을 JSON으로 작성한다. "
         "AI 탐지기를 속이거나 점수를 낮추는 것은 목표가 아니다. " + notes[mode] + "\n"
-        + ("" if mode == "preserve" else persona_instruction(selected) + "\n") +
+        + ("" if mode == "preserve" else persona_instruction(selected) + "\n")
+        + (grammar_note + "\n" if grammar_note else "") +
         "윤문은 요약이 아니다. 정보와 뉘앙스, 중요성에 대한 설명, 예시와 논리 연결을 보존한다. "
         "글을 읽기 쉽게 만들기 위해 문장 하나를 짧은 표어로 압축하지 않는다. "
         "다른 문장에서 이미 반복한 말이라도 원래 역할을 검토하고 삭제 대신 자연스럽게 재구성할 수 있다. "
@@ -507,7 +511,7 @@ def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), v
         "원문 해시를 그대로 사용한다. 수정이 불필요하면 edits=[]가 정답이다.\n"
         "완료 기준: 더 읽기 쉬움, 정보 보존, 변경 이유 제시. 확인할 수 없는 사실을 만들어 보완하지 않는다."
     )
-    return {"instruction": instruction, "mode": mode, "persona": selected.public(), "source_sha256": text_hash(text),
+    return {"instruction": instruction, "mode": mode, "persona": selected.public(), "style": grammar.public(), "source_sha256": text_hash(text),
             "text": text, "voice_sample": voice, "protected_terms": list(terms),
             "protected_spans": [{"start": a, "end": b, "kind": k} for a, b, k in protected_spans(text, terms)],
             "analysis": analyze(text, terms=terms), "output_schema": plan_schema()}

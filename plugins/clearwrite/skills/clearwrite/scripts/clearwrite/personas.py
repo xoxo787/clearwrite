@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .core import InputError
+from .styles import KEEP, Style, get_style
 
 INTENSITIES = {"light": "가볍게", "medium": "보통", "strong": "적극적으로"}
 SHARED_LIMITS = ("어떤 페르소나든 사실·수치·주체·인과·부정·가능성·조건, 필자의 관점과 주장 강도는 바꾸지 않는다. "
@@ -26,11 +27,13 @@ class Persona:
     policy: str
     summary: str
     guidance: str
+    default_style: str = "keep"
 
     def public(self) -> dict[str, Any]:
         return {"id": self.id, "label": self.label, "intensity": self.intensity,
                 "intensity_label": INTENSITIES[self.intensity], "changes_voice": self.changes_voice,
-                "max_change": self.max_change, "policy": self.policy, "summary": self.summary}
+                "max_change": self.max_change, "policy": self.policy, "summary": self.summary,
+                "default_style": self.default_style}
 
 
 # The editor persona keeps the 0.3 budget (35%, atomic) so existing callers are unchanged.
@@ -47,11 +50,11 @@ PERSONAS = {p.id: p for p in (
             "개입 강도: 보통. 필자의 말투와 종결어미를 유지하면서 반복, 늘어진 연결 표현, 상투적 예고와 과장, "
             "명사 나열을 자연스럽게 다듬는다. 문장 구조는 꼭 필요할 때만 바꾼다."),
     Persona("formal", "격식 있는 보고자", "medium", True, .5, "safe-subset",
-            "합니다체로 통일하고 구어·감탄·수사 의문을 보고서 문장으로 바꿉니다.",
-            "말투 바꾸기: 격식 있는 보고자. 한국어 종결어미를 합쇼체(~합니다, ~입니다)로 일관되게 바꾼다. "
+            "구어·감탄·수사 의문을 보고서 문장으로 바꿉니다. 기본 문법 스타일은 합니다체입니다.",
+            "말투 바꾸기: 격식 있는 보고자. "
             "구어 표현, 감탄, 독자에게 묻는 수사 의문문은 평서문으로 바꾼다. 실제로 답을 구하는 질문은 유지한다. "
             "주관적인 수식어는 덜어내되 새 근거를 만들지 않는다. "
-            "영어는 격식체로 쓴다: 축약형을 풀고, 수사 의문문과 구어 표현을 중립적인 서술로 바꾼다."),
+            "영어는 격식체로 쓴다: 축약형을 풀고, 수사 의문문과 구어 표현을 중립적인 서술로 바꾼다.", "hamnida"),
     Persona("columnist", "칼럼니스트", "strong", False, .5, "safe-subset",
             "필자의 관점은 지키되 문장을 과감히 재구성해 리듬과 흐름을 살립니다.",
             "개입 강도: 적극적으로. 필자의 관점, 어조, 종결어미 체계는 유지하되 문장을 과감히 재구성해 읽는 흐름을 살린다. "
@@ -66,10 +69,10 @@ PERSONAS = {p.id: p for p in (
             "부정과 조건 표현은 형태를 바꾸지 않는다. 종결어미 체계는 원문을 따른다. "
             "영어는 Plain Language 원칙으로 짧은 문장, 흔한 낱말, 능동태를 쓴다."),
     Persona("friendly", "다정한 안내자", "strong", True, .5, "safe-subset",
-            "해요체로 바꿔 독자에게 말을 건네듯 부드럽게 씁니다.",
-            "말투 바꾸기: 다정한 안내자. 한국어 종결어미를 해요체(~해요, ~예요, ~할 수 있어요)로 일관되게 바꾼다. "
+            "독자에게 말을 건네듯 부드럽게 씁니다. 기본 문법 스타일은 해요체입니다.",
+            "말투 바꾸기: 다정한 안내자. "
             "독자에게 말을 건네듯 쓰되 반말, 유행어, 이모티콘, 새 감탄사는 넣지 않는다. 딱딱한 한자어는 같은 뜻의 쉬운 말로 바꾼다. "
-            "영어는 'you'와 축약형을 쓰는 따뜻한 대화체로 쓰되 속어는 쓰지 않는다."),
+            "영어는 'you'와 축약형을 쓰는 따뜻한 대화체로 쓰되 속어는 쓰지 않는다.", "haeyo"),
 )}
 DEFAULT_PERSONA = "editor"
 # Builtin rules cannot produce a register change, so only budget-only personas apply there.
@@ -94,10 +97,24 @@ def persona_instruction(persona: Persona) -> str:
                      "두 문장을 하나로 합칠 때만 그 두 문장을 한 편집으로 묶는다. "
                      "군더더기 도입·예고 문구는 그 표현만 지우는 짧은 편집으로 따로 제안한다.")
     if persona.changes_voice:
-        parts.append("페르소나가 말투를 바꾸도록 정했으므로 이 범위의 종결어미·낱말 변경은 필자 말투 유지 지침보다 우선하고, "
-                     "종결어미 통일은 모든 문장에 적용할 수 있다.")
+        parts.append("페르소나가 말투를 바꾸도록 정했으므로 이 범위의 낱말·표현 변경은 필자 말투 유지 지침보다 우선한다.")
     parts.append(SHARED_LIMITS)
     return " ".join(parts)
+
+
+def resolve_style(persona: Persona, style_id: Any = None) -> Style:
+    """An explicit style wins; otherwise the persona's register (formal 합니다체, friendly 해요체)."""
+    return get_style(persona.default_style if style_id is None else style_id)
+
+
+def edit_budget(persona: Persona, style: Style, max_change: float | None = None,
+                policy: str | None = None) -> tuple[float, str]:
+    """Explicit values win. A style conversion edits most sentence endings, so it gets at
+    least the default budget and keeps passing edits when one ending fails a gate."""
+    budget, rule = persona.max_change, persona.policy
+    if style.id != KEEP:
+        budget, rule = max(budget, .35), "safe-subset"
+    return (budget if max_change is None else max_change), (policy or rule)
 
 
 def catalog() -> list[dict[str, Any]]:
