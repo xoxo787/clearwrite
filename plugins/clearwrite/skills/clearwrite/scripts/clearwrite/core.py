@@ -35,7 +35,8 @@ SCOPE_PATTERNS = {
     "negation": r"않|없|아니|못(?:\s|하|했|한|해)|금지|불가능|\b(?:not|no|never|cannot|without)\b|n't\b",
     "possibility": r"수\s*있|가능|아마|어쩌면|\b(?:may|might|perhaps|possibly|could|can)\b",
     "condition": r"경우|만약|때에만|\b(?:if|unless|except|only)\b",
-    "comparison": r"이상|이하|초과|미만|보다|\b(?:more|less|greater|fewer|at least|at most)\b",
+    # Only the attached particle (전년보다) compares; the standalone adverb (보다 효율적으로) means "more".
+    "comparison": r"이상|이하|초과|미만|(?<=[가-힣A-Za-z0-9)\]'\"”’%])보다|\b(?:more|less|greater|fewer|at least|at most)\b",
     "obligation": r"해야|하여야|필수|\b(?:must|required|shall|should)\b",
 }
 SCOPE_RE = {k: re.compile(v, re.I) for k, v in SCOPE_PATTERNS.items()}

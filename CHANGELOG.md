@@ -10,6 +10,8 @@ Added grammar styles, chosen apart from personas: `--style keep|hamnida|haeyo|ha
 
 The compression gates no longer count information-free filler as lost content. Cutting phrases such as "In conclusion", "it is important to note that", "Let's dive in" or "결론적으로", or using a rule's concise equivalent ("in order to" → "to"), is measured against the filler-free original; compressing the remaining content is still blocked. Reports add `filler_adjusted_length_ratio` beside `visible_length_ratio`. Number, scope, direction and protected-span gates are unchanged.
 
+The scope gate no longer treats the standalone adverb "보다" (보다 효율적으로, "more") as a comparison, which blocked "보다 → 더" and some sentence-ending conversions. The attached particle (전년보다) is still guarded.
+
 Web assets are pinned to LF so bundle hashes match across platforms.
 
 ## 0.3.1 — 2026-10-18
