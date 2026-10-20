@@ -6,6 +6,8 @@ Added editor personas that set register and intervention strength: `proofreader`
 
 Fixed the Claude Code backend for subscription logins. `--bare` reads only `ANTHROPIC_API_KEY`, which ClearWrite strips, so every Claude request failed with "Not logged in". Isolation now uses `--setting-sources ""` and `--disable-slash-commands`; the `--disallowedTools '*'` rule is removed because it also denied the StructuredOutput tool. Verified with Claude Code 2.1.304: no hooks, skills, tools or MCP servers load, and the user CLAUDE.md is not included.
 
+Added grammar styles, chosen apart from personas: `--style keep|hamnida|haeyo|handa` (합니다체·해요체·한다체) unifies Korean sentence endings. Without `--style`, `formal` keeps 합니다체 and `friendly` keeps 해요체, so their previous behavior is unchanged. A style conversion gets at least a 35% budget and the safe-subset policy. Reports add `style` and `style_conformance` (before/after share of sentences ending in the target register; a rule-based count that skips quotes, code and headings). The editor adds a style selector and shows the rate. 개조식 is not included yet.
+
 The compression gates no longer count information-free filler as lost content. Cutting phrases such as "In conclusion", "it is important to note that", "Let's dive in" or "결론적으로", or using a rule's concise equivalent ("in order to" → "to"), is measured against the filler-free original; compressing the remaining content is still blocked. Reports add `filler_adjusted_length_ratio` beside `visible_length_ratio`. Number, scope, direction and protected-span gates are unchanged.
 
 Web assets are pinned to LF so bundle hashes match across platforms.

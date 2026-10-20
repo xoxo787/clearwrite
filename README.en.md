@@ -32,6 +32,7 @@ This is an unsigned portable beta. Do not disable OS security protections to run
 - Actual applied-character change rates and counts.
 - TXT export and a JSON report containing source, edits, checks and completed assessments.
 - Editor personas that set intervention strength and register: `proofreader` (light), `editor` (default), `formal`, `columnist`, `plain` and `friendly`. Stronger personas allow up to 50% change and keep passing edits when one is gated; every persona keeps the same preservation checks.
+- A separate grammar style (`--style keep|hamnida|haeyo|handa`) unifies Korean sentence endings; reports show how many sentences end in the target register (a rule-based count that skips quotes, code and headings).
 
 ## What the scores mean
 

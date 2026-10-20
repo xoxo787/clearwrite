@@ -32,6 +32,7 @@
     $('backend').disabled=state.busy || state.stopped;
     $('mode').disabled=state.busy || state.stopped;
     $('persona').disabled=state.busy || state.stopped || $('mode').value==='preserve';
+    $('style').disabled=$('persona').disabled;
     $('model').disabled=state.busy || state.stopped;
     $('cancel').hidden=!state.busy;
     $('style-analyze').disabled=state.busy || state.stopped || !ready();
@@ -48,7 +49,10 @@
     const summary=$('persona-summary'); summary.replaceChildren();
     if ($('mode').value==='preserve') { summary.textContent='원문 보존 기준에서는 페르소나를 적용하지 않습니다.'; return; }
     const name=document.createElement('strong'); name.textContent=option.textContent;
-    summary.append(name,document.createTextNode(' — '+option.dataset.summary+' 숫자·부정·인용 보존 검사는 모든 페르소나에 똑같이 적용됩니다.'));
+    const styleId=$('style').value||option.dataset.style;
+    const style=Array.from($('style').options).find(item=>item.value===styleId);
+    const grammar=styleId==='keep'?'원문 종결어미 유지':style.textContent.split(' · ')[0]+'로 통일';
+    summary.append(name,document.createTextNode(` — ${option.dataset.summary} 문법 스타일: ${grammar}${$('style').value?'':' (페르소나 기본값)'}. 숫자·부정·인용 보존 검사는 모든 페르소나에 똑같이 적용됩니다.`));
   }
   function showOriginal(editing) {
     state.editing=editing;
@@ -136,13 +140,15 @@
     reasons(result); $('edit-toggle').hidden=false; showOriginal(false);
     $('result-count').textContent=`${count(result.text).toLocaleString()}자 · ${label[result.backend]||'로컬 검사'}${result.persona&&result.backend!=='preserve'?' · '+result.persona.label:''}`;
     const dropped=result.status==='edited'?result.rejected_edits.length:0;
+    const fit=result.style_conformance&&result.style_conformance.after;
+    const fitText=fit&&fit.rate!==null?` · ${fit.label} 일치 ${fit.matching}/${fit.sentences}문장 (${Math.round(fit.rate*100)}%, 어미 규칙 판정)`:'';
     $('change-count').textContent=`${result.changes.length}곳`;
     const stats=result.change_statistics;
     $('change-rate').textContent=`${stats.rate_percent.toFixed(1)}%`;
     $('change-rate-detail').textContent=`원문 ${stats.original_characters.toLocaleString()}자 → 수정본 ${stats.result_characters.toLocaleString()}자 · 삭제·교체 ${stats.removed_characters}자 / 추가·대체 ${stats.added_characters}자`;
     const verification=result.verification;
     $('verification').textContent=verification.passed?
-      `기계적 보존 검사 통과${dropped?` · 제안 ${dropped}곳은 검사에 걸려 제외`:''} · 원문 대비 분량 ${(verification.visible_length_ratio*100).toFixed(1)}% (공백 제외) · 의미와 사실은 마지막으로 대조하세요.`:
+      `기계적 보존 검사 통과${dropped?` · 제안 ${dropped}곳은 검사에 걸려 제외`:''}${fitText} · 원문 대비 분량 ${(verification.visible_length_ratio*100).toFixed(1)}% (공백 제외) · 의미와 사실은 마지막으로 대조하세요.`:
       `적용 차단 · ${verification.failures.map(code=>errors[code]||code).join(' · ')} · 원문을 유지했습니다.`;
     $('details').textContent=JSON.stringify(result,null,2);
     $('analysis-summary').textContent=`로컬 규칙 후보 점수 ${result.before.ai_style_score} → ${result.after.ai_style_score} / 100. 모델 문체 점수와 별개의 편집 후보 지표입니다.`;
@@ -200,6 +206,7 @@
   $('backend').onchange=() => { $('model-consent').checked=false; connection(); };
   $('mode').onchange=() => { personaSummary(); actions(); };
   $('persona').onchange=personaSummary;
+  $('style').onchange=personaSummary;
   personaSummary();
   $('model-consent').onchange=() => $('permission').classList.remove('attention');
   function connection() {
@@ -236,7 +243,7 @@
     const generation=state.generation;
     message($('mode').value==='preserve'?'로컬에서 원문 보존 검사 중…':`${label[$('backend').value]}에서 글을 다듬고 있습니다…`,'loading');
     await job({action:'rewrite',text:$('input').value,backend:$('backend').value,mode:$('mode').value,
-      persona:$('persona').value,model:$('model').value.trim(),allow_model:$('model-consent').checked},generation,result=>render(result,generation));
+      persona:$('persona').value,style:$('style').value,model:$('model').value.trim(),allow_model:$('model-consent').checked},generation,result=>render(result,generation));
     $('model-consent').checked=false;
   };
   $('cancel').onclick=async() => {
