@@ -34,7 +34,7 @@
 
 **고친 곳을 보고, 이유를 읽고, 내 글로 남기세요.**
 
-[ClearWrite 0.3.1 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/tag/v0.3.1)
+[ClearWrite 0.4.0 베타 다운로드](https://github.com/xoxo787/clearwrite/releases/tag/v0.4.0)
 
 *연구 인용은 정보처리에 어려움이 있는 참여자 10명의 소규모 탐색 결과입니다. 모든 AI 글의 피로도나 ClearWrite의 효과를 입증한 결과는 아닙니다. [연구 범위와 출처](docs/promotion-review/README.md#연구-인용의-범위)*
 
