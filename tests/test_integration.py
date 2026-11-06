@@ -135,11 +135,13 @@ class UITests(unittest.TestCase):
     def test_analyze(self):
         s,h,b=self.request('POST','/api/process',{'action':'analyze','text':TEXT});self.assertEqual(s,200);self.assertIsNone(json.loads(b)['ai_probability'])
     def test_cross_origin(self):
-        s,h,b=self.request('POST','/api/process',{'action':'analyze','text':TEXT},{'Origin':'https://evil.invalid'});self.assertEqual(s,403)
+        # These header guards must reject before reading the body. As in
+        # test_big_request, do not race a body send against the Windows close.
+        s,h,b=self.request('POST','/api/process',headers={'Origin':'https://evil.invalid','Content-Length':'100'});self.assertEqual(s,403)
     def test_bad_host(self):self.assertEqual(self.request(headers={'Host':'evil.invalid'})[0],403)
-    def test_bad_token(self):self.assertEqual(self.request('POST','/api/process',{'text':TEXT},{'X-ClearWrite-Token':'wrong'})[0],403)
+    def test_bad_token(self):self.assertEqual(self.request('POST','/api/process',headers={'X-ClearWrite-Token':'wrong','Content-Length':'100'})[0],403)
     def test_unexpected_path(self):self.assertEqual(self.request(path='/../../etc/passwd')[0],404)
-    def test_wrong_content_type(self):self.assertEqual(self.request('POST','/api/process','text',{'Content-Type':'text/plain'})[0],415)
+    def test_wrong_content_type(self):self.assertEqual(self.request('POST','/api/process',headers={'Content-Type':'text/plain','Content-Length':'4'})[0],415)
     def test_json_bad_types(self):
         for data in [{'action':'rewrite','text':TEXT,'mode':[]},{'action':'analyze','text':[]},{'action':'execute','text':TEXT},{'action':'analyze','text':TEXT,'secret':'x'}]:
             with self.subTest(data=data):self.assertEqual(self.request('POST','/api/process',data)[0],400)
