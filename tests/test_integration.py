@@ -173,6 +173,32 @@ class BundleInstallTests(unittest.TestCase):
         r=INSTALL.install(home=self.home,apply=True);p=Path(r['destination'])/'SKILL.md';p.write_text('custom')
         with self.assertRaises(ValueError):INSTALL.install(home=self.home,apply=True)
         r=INSTALL.install(home=self.home,apply=True,replace=True);self.assertEqual((Path(r['backups'][0])/'SKILL.md').read_text(),'custom')
+    def test_skill_backup_is_outside_skills_folder(self):
+        # A backup with SKILL.md inside skills/ would load as a second clearwrite skill.
+        for host,skills in (('codex','.agents/skills'),('claude','.claude/skills')):
+            r=INSTALL.install(host=host,home=self.home,apply=True);(Path(r['destination'])/'SKILL.md').write_text('custom')
+            r=INSTALL.install(host=host,home=self.home,apply=True,replace=True)
+            self.assertEqual([p.name for p in (self.home/skills).iterdir()],['clearwrite'])
+            backup=Path(r['backups'][0]);self.assertTrue(backup.parent.samefile(self.home/skills/'../.clearwrite-backups'))
+            self.assertEqual((backup/'SKILL.md').read_text(),'custom')
+    def test_claude_code_skill_install(self):
+        r=INSTALL.install(host='claude',home=self.home,apply=True)
+        self.assertTrue(Path(r['destination']).samefile(self.home/'.claude/skills/clearwrite'));self.assertEqual(r['host'],'claude')
+        self.assertTrue((self.home/'.claude/skills/clearwrite/scripts/clearwrite_skill.py').is_file())
+        self.assertFalse((self.home/'.agents').exists());self.assertFalse((self.home/'.codex').exists())
+        self.assertEqual(sorted(p.name for p in (self.home/'.claude').iterdir()),['skills'])
+        self.assertEqual(INSTALL.install(host='claude',home=self.home,apply=True)['status'],'already-current')
+    def test_claude_code_project_and_dry_run(self):
+        r=INSTALL.install(host='claude',project=self.home);self.assertEqual(r['mode'],'dry-run');self.assertEqual(list(self.home.iterdir()),[])
+        self.assertEqual(Path(r['destination']).name,'clearwrite');self.assertEqual(Path(r['destination']).parent.parent.name,'.claude')
+    def test_claude_code_rejects_plugin_and_unknown_host(self):
+        with self.assertRaises(ValueError):INSTALL.install(host='claude',kind='plugin',home=self.home,apply=True)
+        with self.assertRaises(ValueError):INSTALL.install(host='other',home=self.home,apply=True)
+        self.assertEqual(list(self.home.iterdir()),[])
+    def test_skill_frontmatter_is_host_neutral(self):
+        text=(ROOT/'skills/clearwrite/SKILL.md').read_text(encoding='utf-8');head=text.split('---')[1]
+        self.assertIn('name: clearwrite',head);self.assertIn('description:',head)
+        self.assertNotIn('Codex의 기존 권한',text)
     def test_plugin_catalog(self):
         r=INSTALL.install(kind='plugin',home=self.home,apply=True);j=json.loads(Path(r['catalog']).read_text(encoding='utf-8'));self.assertEqual(j['plugins'][0]['source']['path'],'./.codex/plugins/clearwrite')
     def test_preserves_other_catalog_entries(self):
