@@ -38,6 +38,15 @@ Claude Code는 `--backend claude` / `--provider claude`를 사용합니다. `det
 
 기본 변경 예산은 문자 유사도 35%이며 상한은 50%입니다. 공백 제외 100자 이상의 글은 기본 분량 85%, 50~99자는 70% 이상을 보존하도록 검사합니다. 개별 편집의 과도한 축약도 검사합니다. 이는 의미 보존의 증명이 아닙니다. 명시적으로 요약을 요청한 경우에만 `--min-retention 0`을 사용할 수 있습니다. [검사 원리](ARCHITECTURE.md)
 
+`numbers_units_or_order_changed`가 나오면 숫자뿐 아니라 `mg/L` 같은 단위, `천/만/억` 같은 배율, 대소문자도 대조하세요. `claim_qualifier_changed`는 일부/전체·근삿값·예외·상관/인과 표지가 달라졌다는 뜻입니다. 정확한 표현을 원문대로 남기고 다른 어색한 부분만 수정할 수 있습니다. 새 검사는 기존 제안 JSON 1.0을 그대로 받지만 이전에 통과한 제안을 차단할 수 있으며, `numbers_before/after`의 수량 토큰은 더 긴 단위를 포함할 수 있습니다.
+
+스킬 작업에서 보호 용어는 `prepare`와 `apply`에 똑같이 전달합니다. 문체 샘플은 `prepare`에서만 읽습니다.
+
+```sh
+python rewrite.py prepare input.txt --proposals --term ClearWrite --voice sample.txt -o task.json
+python rewrite.py apply input.txt --proposals proposals.json --term ClearWrite -o edited.txt --report report.json
+```
+
 ## Codex 스킬 설치
 
 ```sh
@@ -74,8 +83,11 @@ python scripts/build_bundles.py
 
 ```sh
 python scripts/build_bundles.py
+python scripts/build_bundles.py --check
 python -m unittest discover -s tests -v
 python scripts/benchmark.py --out reports/reproduced
 ```
 
 기본 검사는 모델·외부 서비스를 호출하지 않습니다. 벤치마크는 출처가 기록된 공개 예문과 저장된 편집 제안을 재현하며 모델 문체 점수의 정확도를 측정하지 않습니다. 개인 글로 만든 보고서는 공개 저장소에 포함하지 마세요.
+
+번들 생성은 생성 디렉터리 전체를 삭제하지 않고 파일을 갱신합니다. 동기화 대상에 원본에 없는 파일이 있으면 보존한 채 오류를 내므로 내용을 확인해 별도로 보관한 뒤 다시 실행하세요. `--check`는 파일을 쓰지 않고 원본 코드·스킬/플러그인 코드와 참조 문서·해시의 불일치를 검사합니다.
