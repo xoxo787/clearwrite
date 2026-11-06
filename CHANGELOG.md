@@ -10,6 +10,8 @@ Public CLI options and proposal schema 1.0 remain compatible. Quantity arrays ca
 
 Bundle generation updates files without recursively deleting generated directories, preserves and reports unexpected files in synchronized trees, and supports a read-only `python scripts/build_bundles.py --check` comparison of code, skill references and source hashes.
 
+Added Claude Code skill installation: `python scripts/install_codex.py --host claude [--apply]` installs the same skill bundle into `~/.claude/skills/clearwrite` (or `PATH/.claude/skills/clearwrite` with `--project`). `--host` defaults to `codex`, so existing commands are unchanged; Claude Code plugins are rejected. The skill text no longer assumes Codex as the only host. Skill backups made by `--replace` now go to a `.clearwrite-backups/` folder next to `skills/` instead of inside it, where hosts could load them as a second `clearwrite` skill. Invocation inside a live Claude Code session is not covered by automated tests.
+
 Stabilized Windows HTTP header-rejection tests by sending headers without the deliberately unread body, as the existing oversized-request test already does. They still require immediate 403/415 responses and do not change server authorization or content-type handling.
 
 ## 0.4.0 — 2026-10-21

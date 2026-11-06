@@ -62,9 +62,18 @@ $clearwrite 이 글을 뜻과 필자의 목소리를 유지하면서 다듬고, 
 
 스킬은 현재 호스트 모델을 사용하며 Codex를 다시 실행하지 않습니다. Python 검사를 실행할 수 있는 환경이 필요합니다. 반면 독립 프로그램은 설치된 CLI로 새 요청을 실행합니다.
 
-기존 설치는 자동 교체하지 않습니다. 본인의 대상 경로를 확인한 뒤 `--replace --apply`로 백업·교체할 수 있습니다. 프로젝트 전용 설치는 `--project PATH`를 사용합니다. 스킬과 플러그인을 동시에 설치하면 이름이 중복될 수 있습니다.
+기존 설치는 자동 교체하지 않습니다. 본인의 대상 경로를 확인한 뒤 `--replace --apply`로 백업·교체할 수 있습니다. 스킬 백업은 같은 이름의 스킬로 다시 읽히지 않도록 `skills/` 밖의 `.clearwrite-backups/`(예: `~/.agents/.clearwrite-backups/`)에 보관합니다. 프로젝트 전용 설치는 `--project PATH`를 사용합니다. 스킬과 플러그인을 동시에 설치하면 이름이 중복될 수 있습니다.
 
 플러그인 형태는 `--kind plugin`이며 설치기의 등록 이후 호스트에서 설치·활성화해야 합니다. [호환성과 설치 위치](COMPATIBILITY.md)
+
+## Claude Code 스킬 설치
+
+```sh
+python scripts/install_codex.py --host claude
+python scripts/install_codex.py --host claude --apply
+```
+
+같은 스킬 번들을 `~/.claude/skills/clearwrite`에 설치합니다. `--project PATH`를 주면 `PATH/.claude/skills/clearwrite`에 설치합니다. 새 Claude Code 세션에서 `/clearwrite`로 호출하거나 윤문을 요청합니다. Claude Code는 스킬 설치만 지원하며 `--kind plugin`은 거부합니다. `settings.json`과 권한 설정은 바꾸지 않습니다. 설치 위치와 파일 구성은 자동 검사로 확인했지만, 실제 Claude Code 세션에서 스킬이 호출되는지는 별도로 확인해야 합니다.
 
 ## Windows 실행 파일 빌드
 

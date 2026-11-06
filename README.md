@@ -183,9 +183,13 @@ python rewrite.py analyze input.txt
 # Codex 스킬 설치 계획 확인 → 적용
 python scripts/install_codex.py --kind skill
 python scripts/install_codex.py --kind skill --apply
+
+# Claude Code 스킬 설치 계획 확인 → 적용
+python scripts/install_codex.py --host claude
+python scripts/install_codex.py --host claude --apply
 ```
 
-스킬을 설치한 뒤 새 Codex 세션에서 `$clearwrite`로 호출할 수 있습니다. 스킬은 해당 세션의 모델로 작동하고, 독립 프로그램은 PC에 설치된 CLI로 새 요청을 보냅니다. 자세한 차이와 명령은 [CLI·스킬 안내](docs/CLI.md)에서 확인하세요.
+스킬을 설치한 뒤 새 Codex 세션에서는 `$clearwrite`, 새 Claude Code 세션에서는 `/clearwrite`로 호출할 수 있습니다. 스킬은 해당 세션의 모델로 작동하고, 독립 프로그램은 PC에 설치된 CLI로 새 요청을 보냅니다. 자세한 차이와 명령은 [CLI·스킬 안내](docs/CLI.md)에서 확인하세요.
 
 ## 검증한 내용과 남은 한계
 
