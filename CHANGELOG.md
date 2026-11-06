@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — 2026-11-04
+
+Strengthened the editing skill with paragraph-role review, reference resolution, subject–verb proximity, conditional sentence-splitting, terminology consistency and a two-way check for omissions and unsupported additions. Added Korean/English decision examples, including cases best left unchanged, and linked primary writing guidance and simplification-evaluation research. The shared model prompt uses the same review criteria. These changes have not been independently evaluated with readers or live model calls.
+
+Fixed quantity preservation gaps: common scientific units, compound units, Korean magnitudes, full time/count units and unit casing now participate in both patch and final-document checks. Added `claim_qualifier_changed` for changes to limited lexical cues for partial/universal/majority scope, numeric approximation, exceptions and correlation/causation. Safe-subset still retains passing independent edits. These conservative checks can reject valid paraphrases and do not establish semantic equivalence.
+
+Public CLI options and proposal schema 1.0 remain compatible. Quantity arrays can contain more complete tokens (for example `1억5천만원` instead of separate digits), and previously accepted proposals may now be blocked. No stored-data migration is required.
+
+Bundle generation updates files without recursively deleting generated directories, preserves and reports unexpected files in synchronized trees, and supports a read-only `python scripts/build_bundles.py --check` comparison of code, skill references and source hashes.
+
+Stabilized Windows HTTP header-rejection tests by sending headers without the deliberately unread body, as the existing oversized-request test already does. They still require immediate 403/415 responses and do not change server authorization or content-type handling.
+
 ## 0.4.0 — 2026-10-21
 
 Added editor personas that set register and intervention strength: `proofreader` (light, 15%, atomic), `editor` (default, unchanged 35% atomic), `formal` (합니다체), `columnist`, `plain` and `friendly` (해요체). The last four use a 50% change budget and the safe-subset policy, so one gated edit no longer discards every other passing edit. All personas keep the same preservation gates and forbid new facts. `rewrite`, `prepare`, `apply` and `verify` accept `--persona`; explicit `--max-change`/`--policy` still win. Strong personas are asked for sentence-sized edits, because multi-sentence rewrites tripped the local compression gate even when only filler was cut. Reports record `persona` and `edit_budget`. Builtin rules accept only `proofreader` and `editor`. The editor adds a persona selector and reports edits dropped by safe-subset.

@@ -33,6 +33,7 @@ This is an unsigned portable beta. Do not disable OS security protections to run
 - TXT export and a JSON report containing source, edits, checks and completed assessments.
 - Editor personas that set intervention strength and register: `proofreader` (light), `editor` (default), `formal`, `columnist`, `plain` and `friendly`. Stronger personas allow up to 50% change and keep passing edits when one is gated; every persona keeps the same preservation checks.
 - A separate grammar style (`--style keep|hamnida|haeyo|handa`) unifies Korean sentence endings; reports show how many sentences end in the target register (a rule-based count that skips quotes, code and headings).
+- The skill reviews paragraph roles, references, grammar and terminology, then checks the applied text for omissions and unsupported additions. [Decision examples](skills/clearwrite/references/editing_examples.md) include valid edits and cases to leave unchanged. Expanded mechanical guards catch common unit/magnitude changes and selected scope, approximation, exception and correlation/causation changes; they do not prove semantic equivalence or better reader comprehension.
 
 ## What the scores mean
 
@@ -74,11 +75,14 @@ These checks do not validate authorship detection, reader cognition or universal
 
 ```sh
 python scripts/build_bundles.py
+python scripts/build_bundles.py --check
 python -m unittest discover -s tests -v
 python scripts/benchmark.py --out reports/reproduced
 ```
 
 `src/clearwrite` is authoritative; generated bundles must stay synchronized. See [contributing](CONTRIBUTING.md), [architecture](docs/ARCHITECTURE.md), [compatibility](docs/COMPATIBILITY.md) and [changelog](CHANGELOG.md).
+
+The builder preserves unknown files instead of recursively deleting generated directories. Its `--check` mode compares code, skill resources and source hashes without writing. The [2026-11-04 audit](reports/EDITORIAL-AUDIT-2026-11-04.md) records the current local checks separately from earlier release testing.
 
 ## License
 
