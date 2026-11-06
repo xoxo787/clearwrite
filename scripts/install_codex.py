@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Cross-platform local skill/plugin installer. Dry-run unless --apply.
 
+Hosts: Codex (skill or plugin, default) and Claude Code (skill only).
 Only own bundle and one catalog entry are changed. No network, credentials,
-Codex permission settings, AGENTS.md, shell profiles or startup hooks.
+Codex/Claude Code permission settings, AGENTS.md, settings.json, shell
+profiles or startup hooks.
 """
 from __future__ import annotations
 import argparse
@@ -37,15 +39,17 @@ def hashes(root: Path) -> dict[str,str]:
 
 
 def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
-            apply: bool=False,replace: bool=False) -> dict:
+            apply: bool=False,replace: bool=False,host: str='codex') -> dict:
     if kind not in {'skill','plugin'}:raise ValueError('지원하지 않는 설치 형태')
+    if host not in {'codex','claude'}:raise ValueError('지원하지 않는 호스트')
+    if host=='claude' and kind!='skill':raise ValueError('Claude Code는 스킬 설치만 지원합니다.')
     base=(project or home or Path.home()).expanduser().resolve()
     if not base.is_dir():raise ValueError('설치 기준 폴더가 없습니다.')
     if project and home:raise ValueError('--home과 --project는 같이 사용하지 않습니다.')
     source=ROOT/('skills/clearwrite' if kind=='skill' else 'plugins/clearwrite')
     if not (source/('SKILL.md' if kind=='skill' else 'plugin.json')).is_file():
         raise ValueError('배포 번들이 없습니다. python scripts/build_bundles.py 를 먼저 실행하세요.')
-    if kind=='skill':target=base/'.agents/skills/clearwrite'
+    if kind=='skill':target=base/('.claude/skills/clearwrite' if host=='claude' else '.agents/skills/clearwrite')
     else:target=base/('plugins/clearwrite' if project else '.codex/plugins/clearwrite')
     reject_links(target,base)
     desired=hashes(source);existing=hashes(target)
@@ -71,7 +75,11 @@ def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
             if data['plugins'][idx].get('source')!=entry['source']:data['plugins'][idx]=entry
         else:data['plugins'].append(entry)
         catalog_changed=before!=json.dumps(data,sort_keys=True)
-    report={'kind':kind,'source':str(source),'destination':str(target),'catalog':str(catalog) if catalog else None,
+    # Hosts load every folder with a SKILL.md under skills/, so a skill backup
+    # kept beside the target would register a second "clearwrite" skill.
+    backup_dir=target.parent.parent/'.clearwrite-backups' if kind=='skill' else target.parent
+    reject_links(backup_dir,base)
+    report={'host':host,'kind':kind,'source':str(source),'destination':str(target),'catalog':str(catalog) if catalog else None,
             'mode':'apply' if apply else 'dry-run','bundle_change_needed':changed,
             'catalog_change_needed':catalog_changed,'permission_changes':False,'backups':[]}
     if not apply:return report
@@ -81,7 +89,8 @@ def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
         shutil.rmtree(staged)
         shutil.copytree(source,staged,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
         if target.exists():
-            backup=target.with_name(target.name+'.backup-'+str(time.time_ns()))
+            backup_dir.mkdir(parents=True,exist_ok=True)
+            backup=backup_dir/(target.name+'.backup-'+str(time.time_ns()))
             target.rename(backup);report['backups'].append(str(backup))
         staged.rename(target)
     if catalog_changed and catalog:
@@ -95,11 +104,12 @@ def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
         finally:
             if os.path.exists(temp):os.unlink(temp)
     report['status']='installed' if changed or catalog_changed else 'already-current'
-    report['next']='새 Codex 세션에서 $clearwrite를 사용하세요.' if kind=='skill' else 'Codex /plugins 또는 데스크톱 플러그인에서 clearwrite-local 항목을 선택해 설치/활성화하세요. 등록은 자동 활성화가 아닙니다.'
+    if host=='claude':report['next']='새 Claude Code 세션에서 /clearwrite로 호출하거나 윤문을 요청하세요.'
+    else:report['next']='새 Codex 세션에서 $clearwrite를 사용하세요.' if kind=='skill' else 'Codex /plugins 또는 데스크톱 플러그인에서 clearwrite-local 항목을 선택해 설치/활성화하세요. 등록은 자동 활성화가 아닙니다.'
     return report
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--kind',choices=['skill','plugin'],default='skill');p.add_argument('--apply',action='store_true');p.add_argument('--replace',action='store_true')
+    p=argparse.ArgumentParser();p.add_argument('--host',choices=['codex','claude'],default='codex');p.add_argument('--kind',choices=['skill','plugin'],default='skill');p.add_argument('--apply',action='store_true');p.add_argument('--replace',action='store_true')
     where=p.add_mutually_exclusive_group();where.add_argument('--home',type=Path);where.add_argument('--project',type=Path)
     args=p.parse_args()
     try:print(json.dumps(install(**vars(args)),ensure_ascii=False,indent=2))

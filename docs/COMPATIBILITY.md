@@ -22,6 +22,8 @@ Python 3.10 문법 범위로 작성했으며 실행 의존성은 표준 라이�
 
 사용자 스킬은 `~/.agents/skills/clearwrite`, 프로젝트 스킬은 `<repo>/.agents/skills/clearwrite`입니다. 새 세션에서 `$clearwrite`를 명시적으로 호출합니다. `agents/openai.yaml`은 암묵적 실행을 끕니다. 기존 AGENTS.md·config.toml·권한 정책·API 키 파일은 변경하지 않습니다.
 
+Claude Code 사용자 스킬은 `~/.claude/skills/clearwrite`, 프로젝트 스킬은 `<repo>/.claude/skills/clearwrite`입니다(`--host claude`). 새 세션에서 `/clearwrite`로 호출합니다. `agents/openai.yaml`은 Codex 전용이라 Claude Code에서는 암묵적 실행을 끄지 않습니다. 따라서 윤문 요청에 맞으면 Claude Code가 스킬을 스스로 고를 수 있습니다. `settings.json`·권한 설정은 변경하지 않습니다.
+
 플러그인은 사용자 기준 `~/.codex/plugins/clearwrite`, 사용자 카탈로그는 `~/.agents/plugins/marketplace.json`입니다. 프로젝트 설치는 `<repo>/plugins/clearwrite`와 `<repo>/.agents/plugins/marketplace.json`입니다. 로컬 source 경로는 카탈로그 파일의 부모가 아니라 사용자 홈/프로젝트 루트를 기준으로 작성됩니다. 등록 후 호스트 UI에서 설치/활성화가 필요합니다.
 
 같은 이름의 스킬과 플러그인을 동시에 설치하지 않는 편이 좋습니다. 설치 경로는 사용 중인 Codex의 실제 홈 환경과 일치해야 합니다. Windows와 WSL은 서로 다른 홈입니다. 이 프로그램은 어느 쪽에 설치된 Codex가 사용자의 주 환경인지 추측하지 않습니다.
