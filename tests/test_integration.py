@@ -199,6 +199,16 @@ class BundleInstallTests(unittest.TestCase):
         text=(ROOT/'skills/clearwrite/SKILL.md').read_text(encoding='utf-8');head=text.split('---')[1]
         self.assertIn('name: clearwrite',head);self.assertIn('description:',head)
         self.assertNotIn('Codex의 기존 권한',text)
+    def test_skill_asks_strength_and_tone_before_editing(self):
+        text=(ROOT/'skills/clearwrite/SKILL.md').read_text(encoding='utf-8')
+        ask=text.split('## 시작 전 확인: 강도와 말투',1)[1].split('\n## ',1)[0]
+        self.assertLess(text.index('## 시작 전 확인'),text.index('## 기본 작업 흐름'))
+        self.assertIn('`prepare`를 실행하지 않는다',ask)
+        for value in ['editor','proofreader','columnist','plain','formal','friendly','keep','hamnida','haeyo','handa']:
+            self.assertIn('`'+value+'`',ask,value)
+        # Non-interactive hosts must not block waiting for an answer.
+        self.assertIn('`editor` + `keep`으로 진행',ask);self.assertIn('codex exec',ask)
+        self.assertNotIn('재질문 없이 진행',text)
     def test_plugin_catalog(self):
         r=INSTALL.install(kind='plugin',home=self.home,apply=True);j=json.loads(Path(r['catalog']).read_text(encoding='utf-8'));self.assertEqual(j['plugins'][0]['source']['path'],'./.codex/plugins/clearwrite')
     def test_preserves_other_catalog_entries(self):

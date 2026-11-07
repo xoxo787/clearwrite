@@ -2,6 +2,8 @@
 
 ## Unreleased — 2026-11-04
 
+The skill now asks for editing strength (`editor`, `proofreader`, `columnist`, `plain`; `formal`/`friendly` by name) and Korean sentence ending (`keep`, `hamnida`, `haeyo`, `handa`) before editing when the request names neither, and asks only for the missing one when the request names one. Non-interactive runs and "just do it" requests proceed with `editor` + `keep` and say so. Style-analysis and builtin rule requests are not affected. This changes skill instructions only; CLI defaults, the browser editor and the proposal schema are unchanged. Whether hosts follow the question step has not been tested in live sessions.
+
 Strengthened the editing skill with paragraph-role review, reference resolution, subject–verb proximity, conditional sentence-splitting, terminology consistency and a two-way check for omissions and unsupported additions. Added Korean/English decision examples, including cases best left unchanged, and linked primary writing guidance and simplification-evaluation research. The shared model prompt uses the same review criteria. These changes have not been independently evaluated with readers or live model calls.
 
 Fixed quantity preservation gaps: common scientific units, compound units, Korean magnitudes, full time/count units and unit casing now participate in both patch and final-document checks. Added `claim_qualifier_changed` for changes to limited lexical cues for partial/universal/majority scope, numeric approximation, exceptions and correlation/causation. Safe-subset still retains passing independent edits. These conservative checks can reject valid paraphrases and do not establish semantic equivalence.
