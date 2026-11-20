@@ -47,6 +47,14 @@ python rewrite.py prepare input.txt --proposals --term ClearWrite --voice sample
 python rewrite.py apply input.txt --proposals proposals.json --term ClearWrite -o edited.txt --report report.json
 ```
 
+`apply --summary`는 제안 번호별로 적용·제외(사유)를 표준오류에 출력하고, `-o`를 함께 쓰면 결과 본문도 같이 출력합니다. `apply --select 1,3`은 제안 파일에서 고른 번호(1부터)만 적용하며, 요약에도 원래 번호가 그대로 표시됩니다. 두 옵션을 쓰지 않으면 기존 출력과 같습니다.
+
+```sh
+# 검토: 전부 검사해 번호별 판정 보기 → 고른 번호만 적용
+python rewrite.py apply input.txt --proposals proposals.json --persona proofreader --policy safe-subset --summary -o preview.txt
+python rewrite.py apply input.txt --proposals proposals.json --persona proofreader --select 1,3 --summary -o edited.txt
+```
+
 ## Codex 스킬 설치
 
 ```sh
@@ -61,6 +69,8 @@ $clearwrite 이 글을 뜻과 필자의 목소리를 유지하면서 다듬고, 
 ```
 
 요청에 강도나 말투가 없으면 스킬은 편집 전에 한 번 묻습니다. 강도는 보통(`editor`, 기본)·가볍게(`proofreader`)·적극적으로(`columnist`)·쉽게(`plain`) 중에서, 말투는 원문 유지(`keep`, 기본)·합니다체·해요체·한다체 중에서 고릅니다. "칼럼처럼 한다체로"처럼 요청에 적으면 묻지 않습니다. 질문할 수 없는 비대화형 실행이나 "바로 해줘"라는 요청에서는 `editor` + `keep`으로 진행합니다.
+
+"검토해 줘", "맞춤법 봐 줘"처럼 고칠 곳을 찾아 달라는 요청은 검토 모드로 처리합니다. 원문을 바로 바꾸지 않고, 엔진 검사를 통과한 지적만 번호·이유와 함께 필수(맞춤법·띄어쓰기·조사·문법)와 선택(문체)으로 나눠 보여 줍니다. 사용자가 "전부", "필수만", "1,3"처럼 고르면 그 번호만 적용합니다. 기본 범위는 맞춤법·띄어쓰기·조사이며, "문장까지"라고 하면 `editor` 범위까지 봅니다. 요청이 검토인지 윤문인지 분명하지 않으면 원문을 바꾸지 않는 검토로 처리합니다.
 
 스킬은 현재 호스트 모델을 사용하며 Codex를 다시 실행하지 않습니다. Python 검사를 실행할 수 있는 환경이 필요합니다. 반면 독립 프로그램은 설치된 CLI로 새 요청을 실행합니다.
 
