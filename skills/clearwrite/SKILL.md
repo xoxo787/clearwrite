@@ -30,6 +30,8 @@ metadata:
 
 이 SKILL.md가 있는 **실제 디렉터리**에서 `scripts/clearwrite_skill.py`를 찾는다. 고정 홈 경로나 현재 작업 폴더를 가정하지 않는다. 스크립트 옆 `clearwrite/`가 독립 번들이다. Python 3.10 이상이 필요하다. Windows에서는 `python` 또는 `py -3`, macOS/Linux에서는 `python3`를 사용한다.
 
+`doctor`는 처음부터 실행하지 않는다. `prepare`가 실패했을 때만 원인 확인용으로 실행한다.
+
 ```text
 python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
 ```
@@ -37,6 +39,22 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
 표시한 `<실제 스킬 경로>`는 자리표시자다. 실행 전에 실제 경로로 바꾼다. 경로의 공백·한글은 정상이며 항상 인자로 분리하거나 따옴표로 감싼다. 이 프로젝트를 설치하기 위해 전역 AGENTS.md, Codex config.toml, Claude Code settings.json을 덮어쓰지 않는다.
 
 코드 실행 환경이 없으면 아래 편집 원칙으로 문장을 다듬되 **정량 검수 미실행**이라고 표시한다. 실행하지 않은 점수나 통과 판정을 만들지 않는다.
+
+## 명령 실행 규칙: 왕복 줄이기
+
+소요 시간은 엔진보다 모델과 도구 사이의 왕복 횟수가 좌우한다. 다음을 지킨다.
+
+- 한 번의 도구 호출에는 명령 하나만 쓴다. `cd`, `&&`, `;`, 파이프, 셸 변수, `cat`을 섞지 않는다. 호스트의 안전 규칙이 이런 조합을 막거나 사용자 승인을 요구해 재시도가 생긴다. 모든 경로는 따옴표로 감싼 절대 경로로 쓴다.
+- `prepare`는 `-o` 없이 실행해 출력 JSON을 바로 읽는다. 별도의 `task.json`을 만들고 다시 읽지 않는다.
+- `apply`에는 항상 `--summary`를 붙인다. 제안별 적용·제외 사유와 결과 본문이 한 번에 나오므로 결과 파일이나 `report.json`을 따로 읽지 않는다. `report.json`은 요약만으로 판단할 수 없을 때만 읽는다.
+- 같은 이름의 출력 파일이 이미 있으면 덮어쓰지 말고 `edited-2.txt`처럼 새 이름을 쓴다.
+- 가볍게(`proofreader`) 범위와 검토 모드에서는 `references/` 문서를 읽지 않는다. 문장 구조를 고칠 때만 [편집 원칙](references/editorial_rules.md)과 [판단 예시](references/editing_examples.md)를 읽는다.
+
+## 요청 구분: 검토와 윤문
+
+- **검토**: "검토해 줘", "봐 줘", "맞춤법 봐 줘", "틀린 데 있어?"처럼 고칠 곳을 찾아 달라는 요청이다. 원문을 바로 바꾸지 않는다. 아래 [검토 모드](#검토-모드-지적-목록--고른-것만-적용)로 지적 목록을 보여 주고, 사용자가 고른 것만 적용한다. 강도·말투 질문은 하지 않는다. 기본 범위는 맞춤법·띄어쓰기·조사(`proofreader`)다. "문장까지", "어색한 곳도"라고 하면 `editor` 범위까지 본다.
+- **윤문**: "윤문해 줘", "다듬어 줘", "고쳐 줘"처럼 고친 글을 달라는 요청이다. 아래 [시작 전 확인](#시작-전-확인-강도와-말투)을 거쳐 [기본 작업 흐름](#기본-작업-흐름-현재-모델--결정적-검사)으로 처리한다.
+- 둘 중 어느 쪽인지 분명하지 않으면 검토로 처리한다. 검토는 원문을 바꾸지 않아 되돌릴 일이 없다.
 
 ## 시작 전 확인: 강도와 말투
 
@@ -52,8 +70,8 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
 ## 기본 작업 흐름: 현재 모델 + 결정적 검사
 
 1. 사용자 원문을 UTF-8 파일에 그대로 보관한다. 원본을 덮어쓰지 않는다. 가능하면 작업 폴더의 `.clearwrite-runs/` 아래에 실행별 폴더를 만든다. 이미 있는 파일은 교체하지 않는다. 입력은 최대 12,000자다. 긴 글은 문단별 작업을 사용자에게 알리고 처리한다. 나눠 처리한 경우 문서 전체 의미가 검증됐다고 주장하지 않는다.
-2. [편집 원칙](references/editorial_rules.md)을 읽고 사용 목적을 `personal`, `publish`, `technical`, `preserve` 중 정한다. 특별한 요구가 없으면 `personal`이다. 역사적 문학·직접 인용·정확한 원문 보관은 `preserve`를 우선한다. 주어진 독자·용도·개입 강도를 작업 기준으로 삼고, 문단의 주장·근거·예시·조건을 먼저 파악한다. 문장 분리, 번역투, 모호한 지시어를 고칠 때는 [판단 예시](references/editing_examples.md)의 해당 사례를 참고한다.
-   [시작 전 확인](#시작-전-확인-강도와-말투)에서 정한 편집자 페르소나와 말투를 쓴다. 질문 없이 기본값으로 진행했으면 `editor`다. `task.json`의 `persona`와 지시문에 적힌 범위만큼만 고친다.
+2. 가볍게(`proofreader`) 범위가 아니면 [편집 원칙](references/editorial_rules.md)을 읽는다. 사용 목적은 `personal`, `publish`, `technical`, `preserve` 중 정한다. 특별한 요구가 없으면 `personal`이다. 역사적 문학·직접 인용·정확한 원문 보관은 `preserve`를 우선한다. 주어진 독자·용도·개입 강도를 작업 기준으로 삼고, 문단의 주장·근거·예시·조건을 먼저 파악한다. 문장 분리, 번역투, 모호한 지시어를 고칠 때는 [판단 예시](references/editing_examples.md)의 해당 사례를 참고한다.
+   [시작 전 확인](#시작-전-확인-강도와-말투)에서 정한 편집자 페르소나와 말투를 쓴다. 질문 없이 기본값으로 진행했으면 `editor`다. `prepare` 출력의 `persona`와 지시문에 적힌 범위만큼만 고친다.
 
    | 페르소나 | 강도 | 하는 일 | 변경 한도·적용 |
    | --- | --- | --- | --- |
@@ -70,17 +88,17 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
 3. 아래 명령으로 분석·보호 구간·해시·제안 스키마를 얻는다. 원문 파일명과 출력은 실제 작업 경로로 지정한다.
 
 ```text
-python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" --mode personal --persona editor --style keep --proposals -o "task.json"
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" --mode personal --persona editor --style keep --proposals
 ```
 
 사용자가 지정한 고유명사·전문용어는 `--term "보호 용어"`로 넣고 `apply`에도 같은 옵션을 전달한다. 문체 샘플 파일은 `prepare --voice "sample.txt"`로 전달한다. 자동 검사가 고유명사를 모두 알아낸다고 가정하지 않는다.
 
-4. `task.json`을 읽고 **현재 모델**로 편집 제안 `proposals.json`을 작성한다. 먼저 문단의 흐름과 지시 대상, 다음으로 문장 호응과 중복을 살핀다. 선택한 페르소나의 범위에서만 고치고, 이미 자연스러운 표현은 유지한다. 규칙을 단어 금지 목록처럼 적용하지 말고 문맥을 판단한다. 목표는 탐지 점수가 아니라 전달력이다. `original`은 원문에 정확히 한 번 나타나는 문자열이어야 한다. 반복 문구라면 앞뒤 문맥을 더 포함한다. `replacement`, `reason`, `rule`도 문자열로 쓴다. `reason`에는 어느 어색함을 고쳤고 어떤 정보·조건을 보존했는지 구체적으로 적는다. 실제 원문 해시를 그대로 사용한다. 아래는 형식 예시이며 해시를 만들어 사용하면 안 된다.
+4. `prepare` 출력을 읽고 **현재 모델**로 편집 제안 `proposals.json`을 작성한다. 먼저 문단의 흐름과 지시 대상, 다음으로 문장 호응과 중복을 살핀다. 선택한 페르소나의 범위에서만 고치고, 이미 자연스러운 표현은 유지한다. 규칙을 단어 금지 목록처럼 적용하지 말고 문맥을 판단한다. 목표는 탐지 점수가 아니라 전달력이다. `original`은 원문에 정확히 한 번 나타나는 문자열이어야 한다. 반복 문구라면 앞뒤 문맥을 더 포함한다. `replacement`, `reason`, `rule`도 문자열로 쓴다. `reason`에는 어느 어색함을 고쳤고 어떤 정보·조건을 보존했는지 구체적으로 적는다. 실제 원문 해시를 그대로 사용한다. 아래는 형식 예시이며 해시를 만들어 사용하면 안 된다.
 
 ```json
 {
   "schema_version": "1.0",
-  "source_sha256": "task.json에서 받은 원문 해시",
+  "source_sha256": "prepare 출력에서 받은 원문 해시",
   "edits": [
     {
       "original": "원문에 정확히 한 번 나타나는 구간",
@@ -95,15 +113,38 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" prepare "input.txt" 
 5. 제안을 실제 엔진에 적용한다. 스크립트가 모호한 위치·숫자 변조·보호 구간 수정·과도한 변경을 차단한다.
 
 ```text
-python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" --persona editor --style keep -o "edited.txt" --report "report.json"
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" --persona editor --style keep --summary -o "edited.txt" --report "report.json"
 ```
 
 `--persona`와 `--style`은 `prepare`와 같은 값을 쓴다. 변경 한도와 적용 방식(atomic/safe-subset)이 페르소나를 따르며, 결과의 `edit_budget`에 기록된다. safe-subset은 검사에 걸린 제안만 빼고 나머지를 적용하므로 `rejected_edits`를 사용자에게 알린다.
 
-6. `report.json`과 **실제로 적용된 결과**를 읽는다. `blocked`이면 결과는 원문이다. 특히 `excessive_local_compression` / `excessive_document_compression`은 과도한 축약 후보이므로 **정보를 삭제하지 말고 자연스럽게 다시 서술**한다. `numbers_units_or_order_changed`는 숫자·배율·단위를, `claim_qualifier_changed`는 일부/전체·근삿값·예외·상관/인과 표현을 다시 확인한다. 실패한 편집을 검토하고 해당 제안만 제거하거나 원문의 사실 표현을 유지해 한 번 수정한다. 점수를 낮추기 위해 무한 재시도하지 않는다. 페르소나가 정한 변경 한도(기본 35%)와 긴 글의 최소 분량 85% 기준을 몰래 완화하지 않는다. 분량은 공백 제외 글자 수로 계산하며, 단일 문장·문단 축약에도 별도 기준이 적용된다.
+6. `--summary` 출력에서 제안별 판정과 **실제로 적용된 결과**를 읽는다. `blocked`이면 결과는 원문이다. 특히 `excessive_local_compression` / `excessive_document_compression`은 과도한 축약 후보이므로 **정보를 삭제하지 말고 자연스럽게 다시 서술**한다. `numbers_units_or_order_changed`는 숫자·배율·단위를, `claim_qualifier_changed`는 일부/전체·근삿값·예외·상관/인과 표현을 다시 확인한다. 실패한 편집을 검토하고 해당 제안만 제거하거나 원문의 사실 표현을 유지해 한 번 수정한다. 점수를 낮추기 위해 무한 재시도하지 않는다. 페르소나가 정한 변경 한도(기본 35%)와 긴 글의 최소 분량 85% 기준을 몰래 완화하지 않는다. 분량은 공백 제외 글자 수로 계산하며, 단일 문장·문단 축약에도 별도 기준이 적용된다.
 
    최종 대조는 양방향으로 한다. **원문 → 결과:** 주장·주체·근거·예시·조건·예외가 빠지지 않았는지 본다. **결과 → 원문:** 새 사실·인과·확신·경험을 보태지 않았는지 본다. 이어서 문장 호응·지시 대상·용어·말투를 별도로 읽는다. safe-subset으로 일부 제안만 적용되면 서로 의존하던 수정의 연결이 깨지지 않았는지도 확인한다. 자동 검사 통과와 현재 모델의 대조를 독립 의미 검증이나 독자 평가로 표현하지 않는다.
 7. 기본 응답은 윤문 결과와 꼭 필요한 한두 문장의 검수 메모다. 사용자가 원할 때만 전체 진단을 보여준다. 파일을 만들었다면 실제 파일 링크를 제공한다. 수치에는 **문체 후보 점수, AI 작성 확률 아님**을 표시한다. `semantic_equivalence: not_established`는 검사 오류가 아니라 한계 고지다.
+
+## 검토 모드: 지적 목록 → 고른 것만 적용
+
+검토는 기본 작업 흐름과 같은 엔진을 쓰되, 적용 전에 멈추고 사용자가 고르게 한다.
+
+1. 원문을 UTF-8 파일로 보관하고 `prepare`를 `--persona proofreader --style keep --proposals`로 실행한다(`-o` 없음). "문장까지"를 요청했으면 `--persona editor`를 쓴다.
+2. 찾은 문제마다 제안 하나를 `proposals.json`에 쓴다. `rule`은 `spelling`, `spacing`, `particle`, `grammar`(필수) 또는 `style`(선택) 중 하나로 쓴다. `reason`에는 무엇이 왜 틀렸는지 한 문장으로 적는다. 이미 맞는 표현은 제안하지 않는다. 지적할 것이 없으면 "고칠 곳을 찾지 못했다"고만 답하고 끝낸다.
+3. 미리보기로 전부 검사한다. `-o` 파일은 미리보기용이며 사용자에게 결과로 주지 않는다.
+
+```text
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" --persona proofreader --style keep --policy safe-subset --summary -o "review-preview.txt"
+```
+
+4. `--summary`의 번호를 그대로 써서 목록을 보여 준다. 한 줄에 `번호 · 원문 → 제안 · 이유`를 쓰고, 필수와 선택을 나눈다. 엔진이 제외한 제안은 목록에서 빼고 "검사에 걸려 뺀 제안 N개"라고만 적는다. 고친 전체 글은 사용자가 원할 때만 보여 준다. 마지막에 한 번 묻는다: **적용할 번호 — 전부 / 필수만 / 1,3처럼 번호 / 없음**.
+5. 답을 받으면 고른 번호만 적용한다. `--persona`는 1번과 같은 값을 쓰고, `--policy`는 지정하지 않는다. "없음"이면 원문 그대로 두고 끝낸다.
+
+```text
+python "<실제 스킬 경로>/scripts/clearwrite_skill.py" apply "input.txt" --proposals "proposals.json" --persona proofreader --style keep --select "1,3" --summary -o "edited.txt"
+```
+
+6. 결과 본문과 적용한 번호를 알려 준다. 고른 제안끼리 이어지는 수정이었다면 연결이 깨지지 않았는지 확인한다.
+
+질문할 수 없는 실행이면 4번 목록까지만 보여 주고 적용하지 않는다. 검토 요청은 원문을 바꾸라는 뜻이 아니기 때문이다.
 
 ## 빠른 로컬 모드
 
