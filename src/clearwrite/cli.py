@@ -56,6 +56,9 @@ def parser() -> argparse.ArgumentParser:
             group = c.add_mutually_exclusive_group(required=True)
             group.add_argument("--plan", help="오프셋 포함 계획 JSON")
             group.add_argument("--proposals", help="오프셋 없는 제안 JSON")
+            c.add_argument("--select", help="적용할 제안 번호(1부터). 예: 1,3,4. 비우면 전부")
+            c.add_argument("--summary", action="store_true",
+                           help="제안별 적용·제외 사유와 (-o 사용 시) 결과 본문을 표준오류에 한 번에 출력")
         if name == "verify":
             c.add_argument("candidate")
             c.add_argument("--max-change", type=float, default=None, help="비우면 페르소나 기본값(editor 0.35)")
@@ -80,6 +83,50 @@ def emit(value: Any, output: str | None, force: bool, inputs: tuple[str, ...]) -
         sys.stdout.write(text)
         if text and not text.endswith("\n"):
             sys.stdout.write("\n")
+
+
+def select_edits(plan: Any, select: str | None) -> tuple[Any, list[int]]:
+    """Keep only the chosen 1-based proposal numbers; return the numbers kept, in order."""
+    edits = plan.get("edits") if isinstance(plan, dict) else None
+    if not isinstance(edits, list):
+        return plan, []
+    if not select:
+        return plan, list(range(1, len(edits) + 1))
+    try:
+        numbers = [int(x) for x in select.replace(" ", "").split(",") if x]
+    except ValueError:
+        raise InputError("--select에는 1,3처럼 쉼표로 구분한 번호를 쓰세요.") from None
+    if not numbers or len(set(numbers)) != len(numbers) or any(n < 1 or n > len(edits) for n in numbers):
+        raise InputError(f"--select 번호는 1~{len(edits)} 사이에서 겹치지 않게 고르세요.")
+    numbers.sort()
+    return {**plan, "edits": [edits[n - 1] for n in numbers]}, numbers
+
+
+def summary_text(result: dict[str, Any], numbers: list[int], plan_edits: list[dict[str, Any]],
+                 *, max_change: float, include_text: bool) -> str:
+    """Compact per-proposal verdicts so a host model needs no extra file reads."""
+    def key(e: dict[str, Any]) -> tuple[str, str]:
+        return e.get("original", ""), e.get("replacement", "")
+    applied = {key(e) for e in result["applied_edits"]}
+    rejected = {key(r["edit"]): r["reason"] for r in result["rejected_edits"]}
+    check = result["verification"]
+    lines = [f'상태: {result["status"]} · 적용 {len(result["applied_edits"])}곳 · 제외 {len(rejected)}곳 · '
+             f'변경률 {check["character_change_rate"]:.1%} (한도 {max_change:.0%})']
+    for n, e in zip(numbers, plan_edits):
+        k = key(e)
+        if k in applied:
+            verdict = "적용"
+        elif k in rejected:
+            verdict = f"제외({rejected[k]})"
+        else:
+            verdict = "보류(문서 검사 실패)"
+        lines.append(f'[{n}] {verdict}  "{e.get("original", "")}" → "{e.get("replacement", "")}"  · {e.get("reason", "")}')
+    if check["failures"]:
+        lines.append("문서 검사 실패: " + ", ".join(check["failures"]))
+    lines.append("AI 작성 확률이 아닙니다. 검사 통과는 의미 보존의 증명이 아닙니다.")
+    if include_text:
+        lines += ["--- 결과 본문 ---", result["text"]]
+    return "\n".join(lines)
 
 
 def doctor() -> dict[str, Any]:
@@ -149,8 +196,9 @@ def main(argv: list[str] | None = None) -> int:
             persona = get_persona(args.persona)
             style = resolve_style(persona, args.style)
             max_change, policy = edit_budget(persona, style, args.max_change, args.policy)
+            numbers: list[int] = []
             if args.command == "apply":
-                plan = read_json(args.plan or args.proposals)
+                plan, numbers = select_edits(read_json(args.plan or args.proposals), args.select)
                 if args.proposals:
                     plan = resolve_proposals(text, plan)
                 backend = "supplied-plan"
@@ -192,8 +240,12 @@ def main(argv: list[str] | None = None) -> int:
             if args.report:
                 write_text(args.report, dumps(result), force=args.force, inputs=inputs)
             emit(result["text"], args.output, args.force, inputs)
-            print(f'{result["status"]}: 문체 후보 {result["before"]["ai_style_score"]} → {result["after"]["ai_style_score"]} / '
-                  f'수정 {len(result["applied_edits"])}곳. AI 작성 확률이 아닙니다.', file=sys.stderr)
+            if getattr(args, "summary", False):
+                print(summary_text(result, numbers, plan["edits"], max_change=max_change,
+                                   include_text=bool(args.output)), file=sys.stderr)
+            else:
+                print(f'{result["status"]}: 문체 후보 {result["before"]["ai_style_score"]} → {result["after"]["ai_style_score"]} / '
+                      f'수정 {len(result["applied_edits"])}곳. AI 작성 확률이 아닙니다.', file=sys.stderr)
             if result["status"] == "blocked":
                 return 2
             return 0

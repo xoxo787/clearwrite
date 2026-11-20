@@ -78,6 +78,39 @@ class IOCLITests(unittest.TestCase):
         r=self.run_cli('analyze','-',stdin=TEXT);self.assertEqual(r.returncode,0);self.assertIsNone(json.loads(r.stdout)['ai_probability'])
     def test_doctor_no_secrets(self):
         r=self.run_cli('doctor');self.assertEqual(r.returncode,0);self.assertEqual(json.loads(r.stdout)['network_requests'],0)
+    def review_proposals(self):
+        text='오늘 회의는 3시에 시작 합니다. 자료는 미리 읽어 주시기 바랍니다.\n';src=self.root/'검토 원문.txt';src.write_bytes(text.encode('utf-8'))
+        edits=[{'original':'시작 합니다','replacement':'시작합니다','reason':'띄어쓰기','rule':'spacing'},
+               {'original':'3시에','replacement':'4시에','reason':'숫자 변경','rule':'test'},
+               {'original':'미리 읽어','replacement':'먼저 읽어','reason':'낱말','rule':'test'}]
+        p=self.root/'제안.json';p.write_text(json.dumps({'schema_version':'1.0','source_sha256':text_hash(text),'edits':edits},ensure_ascii=False),encoding='utf-8')
+        return text,src,p
+    def test_apply_summary_lists_every_proposal_and_result_text(self):
+        text,src,p=self.review_proposals();out=self.root/'미리보기.txt'
+        r=self.run_cli('apply',src,'--proposals',p,'--persona','proofreader','--policy','safe-subset','--summary','-o',out)
+        self.assertEqual(r.returncode,0,r.stderr)
+        self.assertIn('[1] 적용',r.stderr);self.assertIn('[2] 제외(numbers_units_or_order_changed)',r.stderr);self.assertIn('[3] 적용',r.stderr)
+        body=r.stderr.split('--- 결과 본문 ---\n',1)[1]
+        self.assertEqual(body.rstrip('\n'),out.read_text(encoding='utf-8').rstrip('\n'));self.assertIn('3시에 시작합니다',body)
+        self.assertEqual(src.read_text(encoding='utf-8'),text)
+    def test_apply_summary_without_output_keeps_text_on_stdout(self):
+        _,src,p=self.review_proposals()
+        r=self.run_cli('apply',src,'--proposals',p,'--select','1','--summary')
+        self.assertEqual(r.returncode,0,r.stderr);self.assertIn('시작합니다',r.stdout);self.assertNotIn('--- 결과 본문 ---',r.stderr)
+    def test_apply_select_keeps_original_numbers(self):
+        _,src,p=self.review_proposals();out=self.root/'선택.txt'
+        r=self.run_cli('apply',src,'--proposals',p,'--select','3, 1','--summary','-o',out)
+        self.assertEqual(r.returncode,0,r.stderr);self.assertIn('[1] 적용',r.stderr);self.assertIn('[3] 적용',r.stderr);self.assertNotIn('[2]',r.stderr)
+        self.assertEqual(out.read_text(encoding='utf-8'),'오늘 회의는 3시에 시작합니다. 자료는 먼저 읽어 주시기 바랍니다.\n')
+    def test_apply_select_rejects_bad_numbers(self):
+        _,src,p=self.review_proposals()
+        for bad in ['4','0','1,1','a']:
+            r=self.run_cli('apply',src,'--proposals',p,'--select',bad,'-o',self.root/f'x{bad}.txt')
+            self.assertEqual(r.returncode,3,bad);self.assertIn('--select',r.stderr);self.assertFalse((self.root/f'x{bad}.txt').exists())
+    def test_apply_without_new_flags_is_unchanged(self):
+        _,src,p=self.review_proposals()
+        r=self.run_cli('apply',src,'--proposals',p,'--persona','proofreader','-o',self.root/'기본.txt')
+        self.assertEqual(r.returncode,2);self.assertIn('blocked: 문체 후보',r.stderr);self.assertNotIn('[1]',r.stderr)
     def test_no_input_clobber_even_force(self):
         r=self.run_cli('rewrite',self.input,'-o',self.input,'--force');self.assertEqual(r.returncode,3);self.assertEqual(self.input.read_text(encoding='utf-8'),TEXT)
     def test_no_report_output_collision(self):
@@ -209,6 +242,19 @@ class BundleInstallTests(unittest.TestCase):
         # Non-interactive hosts must not block waiting for an answer.
         self.assertIn('`editor` + `keep`으로 진행',ask);self.assertIn('codex exec',ask)
         self.assertNotIn('재질문 없이 진행',text)
+    def test_skill_review_mode_and_round_trip_rules(self):
+        text=(ROOT/'skills/clearwrite/SKILL.md').read_text(encoding='utf-8')
+        section=lambda h:text.split(h,1)[1].split('\n## ',1)[0]
+        route=section('## 요청 구분: 검토와 윤문');review=section('## 검토 모드: 지적 목록 → 고른 것만 적용');rules=section('## 명령 실행 규칙: 왕복 줄이기')
+        self.assertLess(text.index('## 요청 구분'),text.index('## 시작 전 확인'))
+        self.assertIn('검토로 처리한다',route);self.assertIn('강도·말투 질문은 하지 않는다',route)
+        self.assertIn('--select',review);self.assertIn('--summary',review);self.assertIn('--policy safe-subset',review)
+        self.assertIn('전부 / 필수만',review);self.assertIn('적용하지 않는다',review)
+        for rule in ['`cd`, `&&`','`-o` 없이','`--summary`','`references/` 문서를 읽지 않는다']:self.assertIn(rule,rules,rule)
+        self.assertIn('prepare`가 실패했을 때만',text);self.assertNotIn('-o "task.json"',text)
+        # Every apply example in the skill asks for the one-shot summary.
+        for line in text.splitlines():
+            if 'clearwrite_skill.py" apply' in line:self.assertIn('--summary',line,line)
     def test_plugin_catalog(self):
         r=INSTALL.install(kind='plugin',home=self.home,apply=True);j=json.loads(Path(r['catalog']).read_text(encoding='utf-8'));self.assertEqual(j['plugins'][0]['source']['path'],'./.codex/plugins/clearwrite')
     def test_preserves_other_catalog_entries(self):
