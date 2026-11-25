@@ -16,6 +16,7 @@ import html
 import json
 import math
 import random
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,13 @@ QUESTION = "어느 쪽이 더 자연스럽게 읽히나요?"
 CONTROL_OPENING = "현대 사회에서 이러한 경험은 다양한 측면에서 중요한 의미를 가진다고 할 수 있다."
 CONTROL_CLOSING = "결론적으로, 이러한 일련의 과정은 우리에게 시사하는 바가 크며 앞으로도 지속적인 관심이 필요하다고 할 수 있다."
 RAW = "raw"
+SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+
+def safe_name(value: Any, what: str) -> str:
+    if not isinstance(value, str) or not SAFE_NAME.fullmatch(value) or ".." in value:
+        raise ValueError(f"{what}에는 영문·숫자·._-만 쓰세요(최대 64자, '..' 금지): {value!r}")
+    return value
 
 
 def read_items(path: Path) -> dict[str, dict[str, Any]]:
@@ -33,8 +41,9 @@ def read_items(path: Path) -> dict[str, dict[str, Any]]:
         if not line.strip():
             continue
         item = json.loads(line)
-        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not isinstance(item.get("text"), str):
+        if not isinstance(item, dict) or not isinstance(item.get("text"), str):
             raise ValueError(f"{path}:{n}: id와 text가 필요합니다.")
+        safe_name(item.get("id"), f"{path}:{n}: id")
         if item.get("kind") not in {"human", "ai"}:
             raise ValueError(f"{path}:{n}: kind는 human 또는 ai여야 합니다.")
         if item["id"] in items:
@@ -46,6 +55,7 @@ def read_items(path: Path) -> dict[str, dict[str, Any]]:
 def variant_text(item: dict[str, Any], variant: str, variants_dir: Path | None) -> str | None:
     if variant == RAW:
         return item["text"]
+    safe_name(variant, "변형 이름")
     if variants_dir is None:
         return None
     path = variants_dir / variant / f"{item['id']}.txt"
@@ -68,7 +78,7 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
     left_variant, right_variant = compare
     main, skipped = [], []
     for item in items.values():
-        if item["kind"] != "ai" or (only and item["id"] not in only):
+        if item["kind"] != "ai" or (only is not None and item["id"] not in only):
             continue
         a, b = variant_text(item, left_variant, variants_dir), variant_text(item, right_variant, variants_dir)
         if a is None or b is None:
@@ -89,18 +99,25 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
     sessions: list[list[dict[str, Any]]] = [[] for _ in range(n_sessions)]
     for i, pair in enumerate(pool):
         sessions[i % n_sessions].append(pair)
-    for i, pair in enumerate(repeats):
-        # Put a repeat in a later session than the original when possible, to weaken recall.
+    for pair in repeats:
         home = next(k for k, s in enumerate(sessions) if any(p.get("item") == pair["item"] and p["type"] == "main" for p in s))
-        sessions[(home + 1) % n_sessions if n_sessions > 1 else home].append(pair)
+        # Prefer a later session with room, to weaken recall; never exceed session_size when avoidable.
+        order = [(home + d) % n_sessions for d in range(1, n_sessions)] + [home]
+        target = next((k for k in order if len(sessions[k]) < session_size), order[0])
+        sessions[target].append(pair)
     out = []
     for s_index, session in enumerate(sessions, 1):
         base = [p for p in session if p["type"] != "repeat"]
         rng.shuffle(base)
         for pair in (p for p in session if p["type"] == "repeat"):
-            # Same-session repeats go at least three pairs after the original.
-            first = next((j for j, p in enumerate(base) if p["type"] == "main" and p["item"] == pair["item"]), -3)
-            base.insert(rng.randint(min(first + 3, len(base)), len(base)), pair)
+            first = next((j for j, p in enumerate(base) if p["type"] == "main" and p["item"] == pair["item"]), None)
+            if first is None:
+                base.insert(rng.randint(0, len(base)), pair)
+                continue
+            # Keep at least three positions between original and repeat; place it before if needed.
+            after = list(range(first + 3, len(base) + 1))
+            before = list(range(0, first - 2))
+            base.insert(rng.choice(after or before or [len(base)]), pair)
         session = base
         built = []
         for n, pair in enumerate(session, 1):
@@ -111,6 +128,12 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
                           "left": {"variant": variants[0], "text": texts[0]}, "right": {"variant": variants[1], "text": texts[1]}})
         out.append(built)
     return {"sessions": out, "skipped": skipped}
+
+
+def session_id(seed: int, index: int, pairs: list[dict[str, Any]]) -> str:
+    """Seed, session number and a content hash, so a rebuilt session never reuses old browser answers."""
+    body = json.dumps([[p["pair_id"], p["left"]["text"], p["right"]["text"]] for p in pairs], ensure_ascii=False)
+    return f"{seed}-{index:02d}-{hashlib.sha256(body.encode('utf-8')).hexdigest()[:10]}"
 
 
 def session_html(session_id: str, pairs: list[dict[str, Any]]) -> str:
@@ -213,10 +236,19 @@ def required_wins(n: int, alpha: float = .05) -> int:
 def score(key: dict[str, Any], results: list[dict[str, Any]], *, candidate: str, min_control: float = .75,
           min_consistency: float = .7, alpha: float = .05) -> dict[str, Any]:
     pairs = {p["pair_id"]: p for session in key["sessions"] for p in session}
+    ids = key.get("session_ids")
+    members = {sid: {p["pair_id"] for p in session} for sid, session in zip(ids, key["sessions"])} if ids else None
     answers: dict[str, dict[str, Any]] = {}
     for result in results:
+        allowed = set(pairs)
+        if members is not None:
+            if result.get("session_id") not in members:
+                raise ValueError(f"이 정답 키의 세션이 아닌 결과입니다: {result.get('session_id')!r}")
+            allowed = members[result["session_id"]]
         for a in result.get("answers", []):
-            if a.get("pair_id") in pairs and a.get("choice") in {"left", "right"}:
+            if a.get("pair_id") in allowed and a.get("choice") in {"left", "right"}:
+                if a["pair_id"] in answers:
+                    raise ValueError(f"같은 쌍의 응답이 두 번 있습니다: {a['pair_id']}. 한 독자의 결과만 넣으세요.")
                 answers[a["pair_id"]] = a
     chosen = {pid: pairs[pid][a["choice"]]["variant"] for pid, a in answers.items()}
     main = [pid for pid in chosen if pairs[pid]["type"] == "main"]
@@ -228,16 +260,32 @@ def score(key: dict[str, Any], results: list[dict[str, Any]], *, candidate: str,
     consistent = sum(chosen[pid] == by_item[pairs[pid]["item"]] for pid in repeats)
     flags = sorted(pairs[pid]["item"] for pid, a in answers.items() if a.get("meaning_flag"))
     n = len(main)
+    expected_controls = sum(p["type"] == "control" for p in pairs.values())
+    expected_repeats = sum(p["type"] == "repeat" for p in pairs.values())
     control_rate = control_ok / len(controls) if controls else None
     consistency = consistent / len(repeats) if repeats else None
-    valid = (control_rate is None or control_rate >= min_control) and (consistency is None or consistency >= min_consistency)
+    problems = []
+    if len(controls) < expected_controls:
+        problems.append("attention_checks_incomplete")
+    elif control_rate is not None and control_rate < min_control:
+        problems.append("attention_checks_failed")
+    if len(repeats) < expected_repeats:
+        problems.append("repeats_incomplete")
+    elif consistency is not None and consistency < min_consistency:
+        problems.append("self_consistency_low")
+    valid = not problems
+    excluded: dict[str, int] = {}
+    for skip in key.get("skipped", []):
+        excluded[skip["reason"]] = excluded.get(skip["reason"], 0) + 1
     need = required_wins(n, alpha)
     return {"candidate": candidate, "main_pairs": n, "candidate_wins": wins,
             "win_rate": round(wins / n, 3) if n else None, "wilson_95": wilson(wins, n),
             "one_sided_p": round(binomial_upper_tail(wins, n), 4), "wins_needed_for_alpha": need,
             "attention_checks": {"answered": len(controls), "passed": control_ok, "rate": control_rate, "minimum": min_control},
             "self_consistency": {"repeats": len(repeats), "consistent": consistent, "rate": consistency, "minimum": min_consistency},
-            "meaning_flags": flags, "unanswered": len(pairs) - len(answers),
+            "meaning_flags": flags, "unanswered": len(pairs) - len(answers), "problems": problems,
+            "excluded_items": excluded,
+            "scope": "승률은 두 판본이 실제로 달랐던 쌍에 한정됩니다. 엔진에 막혔거나 바뀌지 않은 항목(excluded_items)은 분모에 없습니다.",
             "valid": valid, "decision": ("candidate_preferred" if valid and n and wins >= need else
                                          "not_shown" if valid else "invalid_session"),
             "interpretation": "한 독자의 자연스러움 선호입니다. 저자 판정, AI 확률, 탐지기 회피 지표가 아닙니다."}
@@ -259,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--out", type=Path, required=True, help="세션 HTML을 둘 새 폴더")
     b.add_argument("--key", type=Path, required=True, help="정답 키 JSON 경로. 세션 폴더 밖에 두세요")
     b.add_argument("--seed", type=int, required=True)
-    b.add_argument("--session-size", type=int, default=24)
+    b.add_argument("--session-size", type=int, default=24, help="회차당 최대 쌍 수")
     b.add_argument("--repeat-share", type=float, default=.15)
     b.add_argument("--controls", type=int, default=4)
     s = sub.add_parser("score", help="응답 채점")
@@ -275,7 +323,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.out.exists() and any(args.out.iterdir()):
                 raise ValueError("--out 폴더가 비어 있지 않습니다. 새 폴더를 지정하세요.")
             key_path = args.key.resolve()
-            if args.out.resolve() in key_path.parents:
+            if key_path == args.out.resolve() or args.out.resolve() in key_path.parents:
                 raise ValueError("정답 키를 세션 폴더 안에 두지 마세요. 독자가 열 수 있습니다.")
             if key_path.exists():
                 raise ValueError("정답 키 파일이 이미 있습니다. 덮어쓰지 않습니다.")
@@ -284,14 +332,20 @@ def main(argv: list[str] | None = None) -> int:
                           session_size=args.session_size, repeat_share=args.repeat_share, controls=args.controls)
             if not any(built["sessions"]):
                 raise ValueError("만들 수 있는 쌍이 없습니다.")
-            args.out.mkdir(parents=True, exist_ok=True)
-            for n, session in enumerate(built["sessions"], 1):
-                (args.out / f"session-{n:02d}.html").write_text(session_html(f"{args.seed}-{n:02d}", session), encoding="utf-8")
-            meta = {"schema_version": "1.0", "compare": list(compare), "seed": args.seed,
+            ids = [session_id(args.seed, n, session) for n, session in enumerate(built["sessions"], 1)]
+            pages = [session_html(sid, session) for sid, session in zip(ids, built["sessions"])]
+            meta = {"schema_version": "1.1", "compare": list(compare), "seed": args.seed,
                     "items_sha256": hashlib.sha256(args.items.read_bytes()).hexdigest(), "skipped": built["skipped"],
-                    "sessions": built["sessions"]}
+                    "session_ids": ids, "sessions": built["sessions"]}
+            # The key is written first: a session page without its key would be unscorable.
             key_path.parent.mkdir(parents=True, exist_ok=True)
             key_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+            try:
+                args.out.mkdir(parents=True, exist_ok=True)
+                for n, page in enumerate(pages, 1):
+                    (args.out / f"session-{n:02d}.html").write_text(page, encoding="utf-8")
+            except OSError as exc:
+                raise ValueError(f"세션 HTML을 쓰지 못했습니다({exc}). 키는 {key_path}에 있습니다. 새 --out과 --key로 다시 만드세요.") from exc
             counts = [len(s) for s in built["sessions"]]
             print(json.dumps({"sessions": len(counts), "pairs_per_session": counts, "skipped": built["skipped"]}, ensure_ascii=False))
         else:

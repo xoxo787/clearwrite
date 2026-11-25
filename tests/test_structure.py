@@ -96,11 +96,11 @@ def deletion_plan(text, original):
 
 LONG = ("지난 토요일 아침 아홉 시에 동네 도서관 강좌에 처음 갔다. 강사는 첫 시간에 읽을 책 두 권을 골라 와서 한 권씩 앞부분을 소리 내어 읽어 주었다. "
         "주민들은 읽은 대목을 두고 저마다 떠오른 경험을 이야기했고, 질문이 끊이지 않아 강의는 예정보다 이십 분 늦게 끝났다. "
-        "돌아오는 길에 빌린 책을 가방에 넣고 다음 주 강좌 신청서도 받아 왔다. 도서관이 책을 빌리는 곳을 넘어 배움과 나눔의 따뜻한 공간으로 바뀌는 뜻깊은 순간이었다. "
+        "돌아오는 길에 빌린 책을 가방에 넣고 다음 주 강좌 신청서도 받아 왔다. 그날의 그 시간은 오래도록 마음속에 따뜻하고 소중한 기억으로 남아 있을 것만 같은 그런 하루였다. "
         "다만 강좌 신청은 선착순 30명까지만 받을 수 있다.")
 
 
-EMPTY = "도서관이 책을 빌리는 곳을 넘어 배움과 나눔의 따뜻한 공간으로 바뀌는 뜻깊은 순간이었다. "
+EMPTY = "그날의 그 시간은 오래도록 마음속에 따뜻하고 소중한 기억으로 남아 있을 것만 같은 그런 하루였다. "
 
 
 class GateTests(unittest.TestCase):
@@ -108,7 +108,7 @@ class GateTests(unittest.TestCase):
         plan = deletion_plan(LONG, EMPTY)
         r = apply_plan(LONG, plan, policy="safe-subset", max_change=.5, **gate_options(get_persona("natural")))
         self.assertEqual(r["status"], "edited", r["rejected_edits"])
-        self.assertNotIn("뜻깊은 순간", r["text"])
+        self.assertNotIn("소중한 기억", r["text"])
 
     def test_editor_still_blocks_the_same_deletion(self):
         plan = deletion_plan(LONG, EMPTY)
@@ -120,6 +120,18 @@ class GateTests(unittest.TestCase):
         r = apply_plan(LONG, plan, policy="safe-subset", max_change=.5, **gate_options(get_persona("natural")))
         self.assertEqual(r["status"], "unchanged")
         self.assertEqual(r["rejected_edits"][0]["reason"], "numbers_units_or_order_changed")
+
+    def test_natural_cannot_delete_a_condition_without_numbers(self):
+        extra = " 주민이라면 누구나 신청할 수 있지만 당일 현장 접수는 받지 않는다."
+        text = LONG + extra
+        r = apply_plan(text, deletion_plan(text, extra), policy="safe-subset", max_change=.5,
+                       **gate_options(get_persona("natural")))
+        self.assertEqual(r["status"], "unchanged")
+        self.assertIn(r["rejected_edits"][0]["reason"], {"scope_negation_or_modality_changed", "claim_qualifier_changed"})
+
+    def test_single_question_or_contrast_is_not_dominant(self):
+        self.assertEqual(structure_signals("동네 도서관에 다녀왔다. 정말 안전할까요? 아이는 책을 골랐다.")["dominant"], [])
+        self.assertEqual(structure_signals("도서관은 단순히 책을 빌리는 곳이 아니라 쉼터였다. 아이는 세 권을 골랐다.")["dominant"], [])
 
     def test_natural_keeps_the_document_length_floor(self):
         floor = gate_options(get_persona("natural"))["min_retention"]
