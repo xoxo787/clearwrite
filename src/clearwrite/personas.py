@@ -28,12 +28,17 @@ class Persona:
     summary: str
     guidance: str
     default_style: str = "keep"
+    # Structural rewriting: multi-sentence edits inside a paragraph and whole-sentence deletion.
+    restructure: bool = False
+    # Document length floor when the caller does not set one (None: engine default 0.85).
+    min_retention: float | None = None
 
     def public(self) -> dict[str, Any]:
         return {"id": self.id, "label": self.label, "intensity": self.intensity,
                 "intensity_label": INTENSITIES[self.intensity], "changes_voice": self.changes_voice,
                 "max_change": self.max_change, "policy": self.policy, "summary": self.summary,
-                "default_style": self.default_style}
+                "default_style": self.default_style, "restructure": self.restructure,
+                "min_retention": self.min_retention}
 
 
 # The editor persona keeps the 0.3 budget (35%, atomic) so existing callers are unchanged.
@@ -73,6 +78,16 @@ PERSONAS = {p.id: p for p in (
             "말투 바꾸기: 다정한 안내자. "
             "독자에게 말을 건네듯 쓰되 반말, 유행어, 이모티콘, 새 감탄사는 넣지 않는다. 딱딱한 한자어는 같은 뜻의 쉬운 말로 바꾼다. "
             "영어는 'you'와 축약형을 쓰는 따뜻한 대화체로 쓰되 속어는 쓰지 않는다.", "haeyo"),
+    Persona("natural", "자연스러운 글 편집자", "strong", False, .5, "safe-subset",
+            "구조까지 고쳐 자연스럽게 읽히게 합니다. 예고·감상 문장과 상투적 묘사를 덜고 문장 순서와 연결을 다시 짭니다.",
+            "개입 강도: 적극적으로, 자연스러운 글. 목표는 읽는 사람이 자연스럽다고 느끼는 글이다. 구조 진단에 나온 습관부터 고친다. "
+            "문장 구조는 모두 바꿀 수 있다. 문장을 합치거나 나누고, 한 문단 안에서 순서를 바꾸고, "
+            "'첫째·둘째' 같은 기계적 열거는 이어지는 문장으로 풀고, 연결어미 뒤 쉼표를 줄인다. "
+            "아무 정보도 더하지 않는 예고·감상·교훈 문장과 '삼삼오오', '가슴이 벅차올랐다' 같은 상투적 묘사는 지우거나, "
+            "원문에 이미 있는 구체적인 장면과 행동으로 대신한다. 원문에 없는 장면·감정·대화·숫자는 새로 만들지 않는다. "
+            "같은 종결어미와 문형이 이어지면 바꾸되 종결어미 체계(합니다체·한다체 등)는 유지한다. "
+            "원문의 사실·장면·대화·조건·필자의 관점은 남기고, 이미 자연스러운 문장은 그대로 둔다. 영어도 같은 원칙을 따른다.",
+            restructure=True, min_retention=.75),
 )}
 DEFAULT_PERSONA = "editor"
 # Builtin rules cannot produce a register change, so only budget-only personas apply there.
@@ -92,6 +107,11 @@ def persona_instruction(persona: Persona) -> str:
     parts = [f"편집자 페르소나: {persona.label}. 페르소나는 편집 방식이며 인물 연기가 아니다.", persona.guidance]
     if persona.intensity == "strong":
         parts.append("이 강도에서는 '최소 편집'보다 페르소나 지침을 우선하되, 정보 보존 규칙은 언제나 그보다 우선한다.")
+    if persona.restructure:
+        parts.append("한 문단 안에서는 여러 문장을 한 편집으로 묶어 합치거나 순서를 바꿀 수 있다. 문단 경계를 넘는 편집은 하지 않는다. "
+                     "정보가 없는 문장을 지울 때는 그 문장과 뒤 공백까지 original로 잡고 replacement는 빈 문자열로 쓴다. "
+                     "지운 문장마다 reason에 왜 정보가 없는지 적는다. 숫자·조건·가능성이 든 문장은 지우지 않는다.")
+    elif persona.intensity == "strong":
         # Multi-sentence rewrites trip the local compression gate even when only filler is cut.
         parts.append("여러 문장을 한 편집으로 묶어 통째로 다시 쓰지 않는다. 한 편집은 한 문장을 넘지 않게 나누되, "
                      "두 문장을 하나로 합칠 때만 그 두 문장을 한 편집으로 묶는다. "
@@ -115,6 +135,18 @@ def edit_budget(persona: Persona, style: Style, max_change: float | None = None,
     if style.id != KEEP:
         budget, rule = max(budget, .35), "safe-subset"
     return (budget if max_change is None else max_change), (policy or rule)
+
+
+def gate_options(persona: Persona, min_retention: float | None = None) -> dict[str, Any]:
+    """Engine gate settings for a persona. An explicit length floor always wins.
+
+    Restructuring personas skip only the per-edit compression check, because deleting an
+    empty sentence or merging two looks like compression. Number, scope, claim, direction,
+    protected-span and whole-document length checks still run."""
+    from .core import DEFAULT_MIN_RETENTION
+    floor = min_retention if min_retention is not None else (
+        persona.min_retention if persona.min_retention is not None else DEFAULT_MIN_RETENTION)
+    return {"min_retention": floor, "local_compression": not persona.restructure}
 
 
 def catalog() -> list[dict[str, Any]]:
