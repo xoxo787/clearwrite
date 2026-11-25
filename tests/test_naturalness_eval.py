@@ -67,7 +67,7 @@ class BuildTests(unittest.TestCase):
     def test_sides_are_balanced_and_texts_match_variants(self):
         pairs = [p for s in self.run_build(session_size=40)["sessions"] for p in s if p["type"] == "main"]
         left_raw = sum(p["left"]["variant"] == "raw" for p in pairs)
-        self.assertTrue(3 <= left_raw <= 16, left_raw)
+        self.assertTrue(5 <= left_raw <= 14, left_raw)
         for p in pairs:
             raw = p["left"] if p["left"]["variant"] == "raw" else p["right"]
             self.assertEqual(raw["text"], self.f.items[p["item"]]["text"])
@@ -77,7 +77,7 @@ class BuildTests(unittest.TestCase):
         for k, p in enumerate(session):
             if p["type"] == "repeat":
                 first = next(j for j, q in enumerate(session) if q["type"] == "main" and q["item"] == p["item"])
-                self.assertGreaterEqual(k - first, 3)
+                self.assertGreaterEqual(abs(k - first), 3)
 
     def test_controls_degrade_the_human_text(self):
         controls = [p for s in self.run_build()["sessions"] for p in s if p["type"] == "control"]
@@ -86,6 +86,31 @@ class BuildTests(unittest.TestCase):
             degraded = p["right"] if human is p["left"] else p["left"]
             self.assertEqual(human["text"], self.f.items[p["item"]]["text"])
             self.assertIn(NE.CONTROL_CLOSING, degraded["text"])
+
+    def test_session_size_is_a_maximum(self):
+        for size in (4, 6, 9):
+            built = self.run_build(session_size=size)
+            self.assertTrue(all(len(s) <= size for s in built["sessions"]), (size, [len(s) for s in built["sessions"]]))
+
+    def test_repeat_spacing_holds_for_many_seeds(self):
+        for seed in range(30):
+            for session in self.run_build(seed=seed, session_size=200)["sessions"]:
+                for k, p in enumerate(session):
+                    if p["type"] == "repeat":
+                        first = next(j for j, q in enumerate(session) if q["type"] == "main" and q["item"] == p["item"])
+                        self.assertGreaterEqual(abs(k - first), 3, seed)
+
+    def test_empty_only_selects_nothing(self):
+        built = self.run_build(only=set(), controls=0)
+        self.assertEqual([p for s in built["sessions"] for p in s], [])
+
+    def test_unsafe_names_are_rejected(self):
+        with self.assertRaises(ValueError):
+            NE.build(self.f.items, compare=("raw", "../edited"), variants_dir=self.f.variants, seed=1)
+        bad = self.f.root / "bad.jsonl"
+        bad.write_bytes(json.dumps({"id": "../../secret", "kind": "ai", "text": "x"}).encode())
+        with self.assertRaises(ValueError):
+            NE.read_items(bad)
 
     def test_identical_variant_is_skipped(self):
         (self.f.variants / "edited" / "ai00.txt").write_bytes(self.f.items["ai00"]["text"].encode())
@@ -151,6 +176,34 @@ class ScoreTests(unittest.TestCase):
         key, results = self.key_and_answers(candidate_wins=12)
         self.assertEqual(NE.score(key, results, candidate="edited")["decision"], "not_shown")
 
+    def test_unanswered_checks_invalidate_the_session(self):
+        key, results = self.key_and_answers()
+        results[0]["answers"] = [a for a in results[0]["answers"] if not a["pair_id"].startswith(("c", "r"))]
+        r = NE.score(key, results, candidate="edited")
+        self.assertEqual(r["decision"], "invalid_session")
+        self.assertEqual(set(r["problems"]), {"attention_checks_incomplete", "repeats_incomplete"})
+
+    def test_duplicate_answers_are_rejected(self):
+        key, results = self.key_and_answers()
+        with self.assertRaises(ValueError):
+            NE.score(key, results + results, candidate="edited")
+
+    def test_results_from_another_session_are_rejected(self):
+        key, results = self.key_and_answers()
+        key["session_ids"] = ["7-01-abc"]
+        results[0]["session_id"] = "7-01-zzz"
+        with self.assertRaises(ValueError):
+            NE.score(key, results, candidate="edited")
+        results[0]["session_id"] = "7-01-abc"
+        self.assertEqual(NE.score(key, results, candidate="edited")["main_pairs"], 20)
+
+    def test_excluded_items_are_reported(self):
+        key, results = self.key_and_answers()
+        key["skipped"] = [{"id": "x", "reason": "identical"}, {"id": "y", "reason": "identical"}]
+        r = NE.score(key, results, candidate="edited")
+        self.assertEqual(r["excluded_items"], {"identical": 2})
+        self.assertIn("분모에 없습니다", r["scope"])
+
     def test_unknown_or_bad_answers_are_ignored(self):
         key, results = self.key_and_answers()
         results[0]["answers"] += [{"pair_id": "nope", "choice": "left"}, {"pair_id": "m0", "choice": "up"}]
@@ -176,11 +229,17 @@ class CliTests(unittest.TestCase):
         pages = sorted(out.glob("session-*.html"))
         self.assertTrue(pages)
         meta = json.loads(key.read_text(encoding="utf-8"))
-        answers = [{"pair_id": p["pair_id"], "choice": "left" if p["left"]["variant"] in {"edited", "human"} else "right"}
-                   for s in meta["sessions"] for p in s]
-        res = self.f.root / "answers.json"
-        res.write_text(json.dumps({"answers": answers}), encoding="utf-8")
-        s = self.cli("score", "--key", key, "--results", res, "--candidate", "edited")
+        self.assertEqual(len(meta["session_ids"]), len(pages))
+        for sid, page in zip(meta["session_ids"], pages):
+            self.assertIn(sid, page.read_text(encoding="utf-8"))
+        files = []
+        for n, (sid, session) in enumerate(zip(meta["session_ids"], meta["sessions"])):
+            answers = [{"pair_id": p["pair_id"], "choice": "left" if p["left"]["variant"] in {"edited", "human"} else "right"}
+                       for p in session]
+            res = self.f.root / f"answers-{n}.json"
+            res.write_text(json.dumps({"session_id": sid, "answers": answers}), encoding="utf-8")
+            files.append(res)
+        s = self.cli("score", "--key", key, "--results", *files, "--candidate", "edited")
         self.assertEqual(s.returncode, 0, s.stderr)
         report = json.loads(s.stdout)
         self.assertEqual(report["candidate_wins"], report["main_pairs"])
@@ -198,6 +257,19 @@ class CliTests(unittest.TestCase):
                      "--out", self.f.root / "새 세션", "--key", key, "--seed", 3)
         self.assertEqual(r.returncode, 3)
         self.assertEqual(key.read_text(encoding="utf-8"), "{}")
+
+    def test_rejects_key_equal_to_session_folder(self):
+        out = self.f.root / "같은 경로"
+        r = self.cli("build", "--items", self.f.items_path, "--variants", self.f.variants, "--compare", "raw,edited",
+                     "--out", out, "--key", out, "--seed", 3)
+        self.assertEqual(r.returncode, 3)
+        self.assertFalse(out.exists())
+
+    def test_rebuilt_sessions_get_new_ids_when_texts_change(self):
+        a = NE.session_id(1, 1, [{"pair_id": "s01p01", "left": {"text": "가"}, "right": {"text": "나"}}])
+        b = NE.session_id(1, 1, [{"pair_id": "s01p01", "left": {"text": "가"}, "right": {"text": "다"}}])
+        self.assertNotEqual(a, b)
+        self.assertTrue(a.startswith("1-01-"))
 
     def test_rejects_same_variant_twice(self):
         r = self.cli("build", "--items", self.f.items_path, "--compare", "raw,raw", "--out", self.f.root / "o",

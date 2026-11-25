@@ -38,6 +38,8 @@ PATTERNS = {
 # Rough per-sentence rates above which a pattern is reported as dominant. Chosen by hand
 # from the development texts; deliberately not fitted to any held-out or detector data.
 DOMINANT_RATE = {"ending_comma": .25, "enumeration": .0, "teaser": .0, "wrap_up": .12, "stock_phrase": .12, "not_only": .0}
+# A pattern seen once is not a habit: questions and contrasts are often deliberate.
+MIN_COUNT = {"ending_comma": 2, "enumeration": 2, "teaser": 2, "wrap_up": 2, "stock_phrase": 2, "not_only": 2}
 SENTENCE_RE = re.compile(r"[^.!?。！？\n]+[.!?。！？]*")
 
 
@@ -63,7 +65,7 @@ def structure_signals(text: str, *, terms: tuple[str, ...] = ()) -> dict[str, An
         sentences_hit = sum(bool(pattern.search(s)) for s in sents) if hits else 0
         patterns[key] = {"label": label, "count": len(hits), "sentence_rate": round(sentences_hit / n, 3),
                          "examples": [text[m.start():m.end()].strip() for m in hits[:3]]}
-    dominant = sorted((k for k, v in patterns.items() if v["count"] and v["sentence_rate"] > DOMINANT_RATE[k]),
+    dominant = sorted((k for k, v in patterns.items() if v["count"] >= MIN_COUNT[k] and v["sentence_rate"] > DOMINANT_RATE[k]),
                       key=lambda k: -patterns[k]["sentence_rate"])
     paragraphs = [p for p in re.split(r"\n\s*\n", prose) if p.strip()]
     return {
