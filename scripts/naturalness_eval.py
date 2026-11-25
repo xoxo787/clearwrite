@@ -345,7 +345,7 @@ def main(argv: list[str] | None = None) -> int:
                 for n, page in enumerate(pages, 1):
                     (args.out / f"session-{n:02d}.html").write_text(page, encoding="utf-8")
             except OSError as exc:
-                raise ValueError(f"세션 HTML을 쓰지 못했습니다({exc}). 키는 {key_path}에 있습니다. 새 --out과 --key로 다시 만드세요.") from exc
+                raise ValueError(f"세션 HTML을 쓰지 못했습니다({exc}). 키는 {key_path}에 있고 {args.out}에 일부 세션 파일이 남았을 수 있습니다. 둘 다 쓰지 말고 새 --out과 --key로 다시 만드세요.") from exc
             counts = [len(s) for s in built["sessions"]]
             print(json.dumps({"sessions": len(counts), "pairs_per_session": counts, "skipped": built["skipped"]}, ensure_ascii=False))
         else:
