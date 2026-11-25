@@ -12,7 +12,7 @@ from . import __version__
 from .core import (InputError, MODES, DEFAULT_MIN_RETENTION, analyze, apply_plan, make_plan, prepare,
                    proposal_schema, resolve_proposals, verify)
 from .io import dumps, ensure_destination, read_json, read_text, write_text
-from .personas import BUILTIN_PERSONAS, PERSONAS, edit_budget, get_persona, resolve_style
+from .personas import BUILTIN_PERSONAS, PERSONAS, edit_budget, gate_options, get_persona, resolve_style
 from .styles import KEEP, STYLES, conformance
 from .providers import ProviderError, ollama_plan
 
@@ -32,8 +32,8 @@ def parser() -> argparse.ArgumentParser:
         if name in {"rewrite", "prepare"}:
             c.add_argument("--voice", help="문체 참고 UTF-8 파일, 최대 3,000자")
         if name in {"rewrite", "apply", "verify"}:
-            c.add_argument("--min-retention", type=float, default=DEFAULT_MIN_RETENTION,
-                           help="정보 압축 방지용 최소 분량 비율(기본 0.85, 0이면 해제). 짧은 글은 완화 적용")
+            c.add_argument("--min-retention", type=float, default=None,
+                           help=f"정보 압축 방지용 최소 분량 비율(기본 {DEFAULT_MIN_RETENTION}, natural은 0.75, 0이면 해제). 짧은 글은 완화 적용")
         if name in {"rewrite", "prepare", "apply", "verify"}:
             c.add_argument("--persona", choices=list(PERSONAS), default=None,
                            help="편집자 페르소나: 말투와 개입 강도. 기본 editor(담백한 편집자)")
@@ -191,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
             selected = get_persona(args.persona)
             max_change, _ = edit_budget(selected, resolve_style(selected, args.style), args.max_change)
             value = verify(text, read_text(args.candidate), terms=terms, max_change=max_change,
-                           min_retention=args.min_retention)
+                           min_retention=gate_options(selected, args.min_retention)["min_retention"])
         else:
             persona = get_persona(args.persona)
             style = resolve_style(persona, args.style)
@@ -226,11 +226,12 @@ def main(argv: list[str] | None = None) -> int:
                         raise InputError("builtin 규칙은 페르소나 말투나 문법 스타일을 적용하지 못합니다. "
                                          "proofreader·editor와 --style keep을 쓰거나 모델 백엔드를 선택하세요.")
                     plan = make_plan(text, mode=args.mode, terms=terms)
-            result = apply_plan(text, plan, terms=terms, max_change=max_change,
-                                policy=policy, min_retention=args.min_retention)
+            gates = gate_options(persona, args.min_retention)
+            result = apply_plan(text, plan, terms=terms, max_change=max_change, policy=policy, **gates)
             result["backend"] = backend
             result["persona"] = persona.public()
             result["edit_budget"] = {"max_change": max_change, "policy": policy}
+            result["gates"] = gates
             result["style"] = style.public()
             if style.id != KEEP:
                 result["style_conformance"] = {"before": conformance(text, style.id, terms=terms),

@@ -441,7 +441,8 @@ def validate_plan(text: str, plan: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def apply_plan(text: str, plan: dict[str, Any], *, terms: tuple[str, ...] = (), max_change: float = .35,
-               policy: str = "atomic", min_retention: float = DEFAULT_MIN_RETENTION) -> dict[str, Any]:
+               policy: str = "atomic", min_retention: float = DEFAULT_MIN_RETENTION,
+               local_compression: bool = True) -> dict[str, Any]:
     checked_text(text)
     if not isinstance(policy, str) or policy not in {"atomic", "safe-subset"}:
         raise InputError("policy는 atomic 또는 safe-subset이어야 합니다.")
@@ -468,7 +469,7 @@ def apply_plan(text: str, plan: dict[str, Any], *, terms: tuple[str, ...] = (), 
             problem = "claim_qualifier_changed"
         elif [x.lower() for x in DIRECTION_RE.findall(edit["original"])] != [x.lower() for x in DIRECTION_RE.findall(edit["replacement"])]:
             problem = "direction_changed"
-        elif locally_overcompressed(edit["original"], edit["replacement"], min_retention):
+        elif local_compression and locally_overcompressed(edit["original"], edit["replacement"], min_retention):
             problem = "excessive_local_compression"
         if problem:
             rejected.append({"edit": edit, "reason": problem})
@@ -508,6 +509,7 @@ def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), v
             persona: str | None = None, style: str | None = None) -> dict[str, Any]:
     from .personas import get_persona, persona_instruction, resolve_style  # personas imports core
     from .styles import style_instruction
+    from .structure import diagnosis_instruction, structure_signals
     checked_text(text)
     if not isinstance(mode, str) or mode not in MODES:
         raise InputError("알 수 없는 편집 모드입니다.")
@@ -527,6 +529,8 @@ def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), v
         "목표: 글의 읽기 부담을 줄이는 최소 편집 계획을 JSON으로 작성한다. "
         "AI 탐지기를 속이거나 점수를 낮추는 것은 목표가 아니다. " + notes[mode] + "\n"
         + ("" if mode == "preserve" else persona_instruction(selected) + "\n")
+        + (diagnosis_instruction(structure_signals(text, terms=terms)) + "\n"
+           if selected.restructure and mode != "preserve" else "")
         + (grammar_note + "\n" if grammar_note else "") +
         "윤문은 요약이 아니다. 정보와 뉘앙스, 중요성에 대한 설명, 예시와 논리 연결을 보존한다. "
         "글을 읽기 쉽게 만들기 위해 문장 하나를 짧은 표어로 압축하지 않는다. "
@@ -554,7 +558,8 @@ def prepare(text: str, *, mode: str = "personal", terms: tuple[str, ...] = (), v
     return {"instruction": instruction, "mode": mode, "persona": selected.public(), "style": grammar.public(), "source_sha256": text_hash(text),
             "text": text, "voice_sample": voice, "protected_terms": list(terms),
             "protected_spans": [{"start": a, "end": b, "kind": k} for a, b, k in protected_spans(text, terms)],
-            "analysis": analyze(text, terms=terms), "output_schema": plan_schema()}
+            "analysis": analyze(text, terms=terms), "structure": structure_signals(text, terms=terms),
+            "output_schema": plan_schema()}
 
 
 def proposal_schema() -> dict[str, Any]:
