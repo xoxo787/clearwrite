@@ -79,6 +79,15 @@ class PersonaTests(unittest.TestCase):
         self.assertNotIn("한 편집은 한 문장을 넘지 않게", text)
         self.assertIn("부정·가능성·조건", text)
 
+    def test_natural_is_subtractive(self):
+        guidance = get_persona("natural").guidance
+        for phrase in ["덜어내기가 먼저", "바꾸기만 하는 편집", "원문에 없던 낱말", "편집은 적을수록 좋다"]:
+            self.assertIn(phrase, guidance)
+        skill = (ROOT / "skills/clearwrite/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("`delete`, `split`, `tidy`", skill)
+        guide = (ROOT / "skills/clearwrite/references/structure_patterns.md").read_text(encoding="utf-8")
+        self.assertLess(guide.index("## 덜어내기가 먼저"), guide.index("## 패턴별 판단"))
+
     def test_prepare_adds_diagnosis_only_for_natural(self):
         natural, editor = prepare(AI_LIKE, persona="natural"), prepare(AI_LIKE, persona="editor")
         self.assertIn("구조 진단", natural["instruction"])
