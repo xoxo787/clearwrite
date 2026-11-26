@@ -81,7 +81,7 @@ class PersonaTests(unittest.TestCase):
 
     def test_natural_edits_only_diagnosed_spans(self):
         guidance = get_persona("natural").guidance
-        for phrase in ["1단계 진단", "진단한 구간만 고친다", "구체성 부족 구간은 고치지 않는다", "동의어 바꾸기", "끼워 넣기"]:
+        for phrase in ["1단계 진단", "진단한 구간만 고친다", "구체성 부족 구간은 고치지 않는다", "동의어 바꾸기", "끼워 넣기", "셋 이상 잇따르지 않게"]:
             self.assertIn(phrase, guidance)
         skill = (ROOT / "skills/clearwrite/SKILL.md").read_text(encoding="utf-8")
         for rule in ["`cliche`", "`exposition`", "`purple`", "`wording`", "`structure`", "`punctuation`", "`consistency`", "`specificity`"]:
@@ -89,6 +89,7 @@ class PersonaTests(unittest.TestCase):
         guide = (ROOT / "skills/clearwrite/references/structure_patterns.md").read_text(encoding="utf-8")
         self.assertLess(guide.index("## 진단한 구간만 고친다"), guide.index("## 패턴별 판단"))
         self.assertIn("디테일을 지어내지 말고", guide)
+        self.assertIn("한국어 독자로 효과를 검증하지는 않았다", skill)
 
     def test_prepare_adds_diagnosis_only_for_natural(self):
         natural, editor = prepare(AI_LIKE, persona="natural"), prepare(AI_LIKE, persona="editor")
