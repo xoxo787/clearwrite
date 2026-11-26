@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import secrets
 import shutil
 import sys
 import tempfile
@@ -85,14 +86,40 @@ def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
     if not apply:return report
     if changed:
         target.parent.mkdir(parents=True,exist_ok=True)
-        staged=Path(tempfile.mkdtemp(prefix='.clearwrite-stage-',dir=target.parent))
-        shutil.rmtree(staged)
-        shutil.copytree(source,staged,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+        # Stage outside skills/ under a fresh unique name: nothing is deleted first, and a
+        # failed copy never leaves a half-written folder where hosts look for skills.
+        stage_root=target.parent.parent/'.clearwrite-staging';reject_links(stage_root,base)
+        stage_root.mkdir(parents=True,exist_ok=True)
+        staged=None
+        for _ in range(5):
+            candidate=stage_root/f'{target.name}-{time.time_ns()}-{os.getpid()}-{secrets.token_hex(4)}'
+            try:
+                shutil.copytree(source,candidate,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+            except FileExistsError:
+                continue
+            except OSError as exc:
+                raise ValueError(f'설치 파일 복사에 실패했습니다({exc}). 중간 사본이 {candidate}에 남았을 수 있습니다. 설치 위치는 바뀌지 않았습니다.') from exc
+            staged=candidate;break
+        if staged is None:raise ValueError('임시 설치 폴더 이름이 계속 겹칩니다. 다시 실행하세요.')
+        backup=None
         if target.exists():
             backup_dir.mkdir(parents=True,exist_ok=True)
             backup=backup_dir/(target.name+'.backup-'+str(time.time_ns()))
             target.rename(backup);report['backups'].append(str(backup))
-        staged.rename(target)
+        try:
+            staged.rename(target)
+        except OSError as exc:
+            # e.g. staging and skills/ on different filesystems: put the old install back.
+            if backup is None:
+                raise ValueError(f'새 설치본을 옮기지 못했습니다({exc}). 기존 설치는 없었고 새 사본은 {staged}에 있습니다.') from exc
+            try:
+                backup.rename(target)
+            except OSError as restore_exc:
+                raise ValueError(f'새 설치본을 옮기지 못했고({exc}) 기존 설치를 되돌리지도 못했습니다({restore_exc}). '
+                                 f'기존 설치는 {backup}, 새 사본은 {staged}에 있습니다.') from exc
+            raise ValueError(f'새 설치본을 옮기지 못했습니다({exc}). 기존 설치를 되돌렸습니다. 새 사본은 {staged}에 있습니다.') from exc
+        try:stage_root.rmdir()  # only if empty; never recursive
+        except OSError:pass
     if catalog_changed and catalog:
         catalog.parent.mkdir(parents=True,exist_ok=True)
         if catalog.exists():

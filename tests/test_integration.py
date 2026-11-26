@@ -214,6 +214,73 @@ class BundleInstallTests(unittest.TestCase):
             self.assertEqual([p.name for p in (self.home/skills).iterdir()],['clearwrite'])
             backup=Path(r['backups'][0]);self.assertTrue(backup.parent.samefile(self.home/skills/'../.clearwrite-backups'))
             self.assertEqual((backup/'SKILL.md').read_text(),'custom')
+    def test_no_recursive_delete_in_shipped_code(self):
+        # Installers and builders replace by rename and keep backups; they never delete trees.
+        import ast
+        banned = {'rmtree', 'removedirs'}
+        files = [p for d in ('scripts', 'src', 'skills/clearwrite/scripts', 'plugins') for p in (ROOT/d).rglob('*.py')]
+        self.assertTrue(files)
+        for path in files:
+            tree = ast.parse(path.read_text(encoding='utf-8'))
+            calls = {n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, 'id', '')
+                     for n in ast.walk(tree) if isinstance(n, ast.Call)}
+            imported = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) for a in n.names}
+            self.assertFalse((calls | imported) & banned, path)
+    def test_install_stages_outside_skills_and_retries_name_collisions(self):
+        stage = self.home.resolve()/'.agents/.clearwrite-staging'  # install resolves the base (macOS /private, Windows long names)
+        real_copytree = shutil.copytree; seen = []
+        def flaky(src, dst, *args, **kw):
+            if Path(dst).parent == stage:  # top-level call; inner calls copy subfolders
+                seen.append(dst)
+                if len(seen) == 1:
+                    raise FileExistsError(dst)
+            return real_copytree(src, dst, *args, **kw)
+        with patch.object(INSTALL.shutil, 'copytree', side_effect=flaky):
+            r = INSTALL.install(home=self.home, apply=True)
+        self.assertEqual(r['status'], 'installed')
+        self.assertEqual(len(seen), 2)
+        self.assertTrue(all(Path(d).parent == stage for d in seen))
+        self.assertEqual([p.name for p in (self.home/'.agents/skills').iterdir()], ['clearwrite'])
+        self.assertFalse(stage.exists())
+    def test_failed_move_restores_the_previous_install(self):
+        INSTALL.install(home=self.home, apply=True)
+        target = self.home.resolve()/'.agents/skills/clearwrite'; (target/'SKILL.md').write_text('custom')
+        real_rename = Path.rename
+        def failing(self_path, dest):
+            if Path(dest) == target and '.clearwrite-staging' in str(self_path):
+                raise OSError(18, 'cross-device link')
+            return real_rename(self_path, dest)
+        with patch.object(Path, 'rename', failing):
+            with self.assertRaises(ValueError):
+                INSTALL.install(home=self.home, apply=True, replace=True)
+        self.assertEqual((target/'SKILL.md').read_text(), 'custom')
+        self.assertEqual([p.name for p in (self.home/'.agents/skills').iterdir()], ['clearwrite'])
+    def test_failed_move_messages_name_the_real_state(self):
+        target = self.home.resolve()/'.agents/skills/clearwrite'
+        real_rename = Path.rename
+        def fail_into_target(self_path, dest):
+            if Path(dest) == target:
+                raise OSError(18, 'cross-device link')
+            return real_rename(self_path, dest)
+        with patch.object(Path, 'rename', fail_into_target):
+            with self.assertRaises(ValueError) as fresh:
+                INSTALL.install(home=self.home, apply=True)
+        self.assertIn('기존 설치는 없었고', str(fresh.exception))
+        INSTALL.install(home=self.home, apply=True); (target/'SKILL.md').write_text('custom')
+        with patch.object(Path, 'rename', fail_into_target):
+            with self.assertRaises(ValueError) as both:
+                INSTALL.install(home=self.home, apply=True, replace=True)
+        self.assertIn('되돌리지도 못했습니다', str(both.exception))
+        backup = next((self.home.resolve()/'.agents/.clearwrite-backups').iterdir())
+        self.assertIn(str(backup), str(both.exception))
+        self.assertEqual((backup/'SKILL.md').read_text(), 'custom')
+    def test_failed_copy_leaves_the_install_untouched(self):
+        INSTALL.install(home=self.home, apply=True)
+        (self.home/'.agents/skills/clearwrite/SKILL.md').write_text('custom')
+        with patch.object(INSTALL.shutil, 'copytree', side_effect=PermissionError('denied')):
+            with self.assertRaises(ValueError):
+                INSTALL.install(home=self.home, apply=True, replace=True)
+        self.assertEqual((self.home/'.agents/skills/clearwrite/SKILL.md').read_text(), 'custom')
     def test_claude_code_skill_install(self):
         r=INSTALL.install(host='claude',home=self.home,apply=True)
         self.assertTrue(Path(r['destination']).samefile(self.home/'.claude/skills/clearwrite'));self.assertEqual(r['host'],'claude')
