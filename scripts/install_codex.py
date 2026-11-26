@@ -110,7 +110,13 @@ def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
             staged.rename(target)
         except OSError as exc:
             # e.g. staging and skills/ on different filesystems: put the old install back.
-            if backup is not None:backup.rename(target)
+            if backup is None:
+                raise ValueError(f'새 설치본을 옮기지 못했습니다({exc}). 기존 설치는 없었고 새 사본은 {staged}에 있습니다.') from exc
+            try:
+                backup.rename(target)
+            except OSError as restore_exc:
+                raise ValueError(f'새 설치본을 옮기지 못했고({exc}) 기존 설치를 되돌리지도 못했습니다({restore_exc}). '
+                                 f'기존 설치는 {backup}, 새 사본은 {staged}에 있습니다.') from exc
             raise ValueError(f'새 설치본을 옮기지 못했습니다({exc}). 기존 설치를 되돌렸습니다. 새 사본은 {staged}에 있습니다.') from exc
         try:stage_root.rmdir()  # only if empty; never recursive
         except OSError:pass

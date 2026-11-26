@@ -255,6 +255,25 @@ class BundleInstallTests(unittest.TestCase):
                 INSTALL.install(home=self.home, apply=True, replace=True)
         self.assertEqual((target/'SKILL.md').read_text(), 'custom')
         self.assertEqual([p.name for p in (self.home/'.agents/skills').iterdir()], ['clearwrite'])
+    def test_failed_move_messages_name_the_real_state(self):
+        target = self.home/'.agents/skills/clearwrite'
+        real_rename = Path.rename
+        def fail_into_target(self_path, dest):
+            if Path(dest) == target:
+                raise OSError(18, 'cross-device link')
+            return real_rename(self_path, dest)
+        with patch.object(Path, 'rename', fail_into_target):
+            with self.assertRaises(ValueError) as fresh:
+                INSTALL.install(home=self.home, apply=True)
+        self.assertIn('기존 설치는 없었고', str(fresh.exception))
+        INSTALL.install(home=self.home, apply=True); (target/'SKILL.md').write_text('custom')
+        with patch.object(Path, 'rename', fail_into_target):
+            with self.assertRaises(ValueError) as both:
+                INSTALL.install(home=self.home, apply=True, replace=True)
+        self.assertIn('되돌리지도 못했습니다', str(both.exception))
+        backup = next((self.home/'.agents/.clearwrite-backups').iterdir())
+        self.assertIn(str(backup), str(both.exception))
+        self.assertEqual((backup/'SKILL.md').read_text(), 'custom')
     def test_failed_copy_leaves_the_install_untouched(self):
         INSTALL.install(home=self.home, apply=True)
         (self.home/'.agents/skills/clearwrite/SKILL.md').write_text('custom')
