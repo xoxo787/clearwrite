@@ -214,6 +214,10 @@ class BundleInstallTests(unittest.TestCase):
             self.assertEqual([p.name for p in (self.home/skills).iterdir()],['clearwrite'])
             backup=Path(r['backups'][0]);self.assertTrue(backup.parent.samefile(self.home/skills/'../.clearwrite-backups'))
             self.assertEqual((backup/'SKILL.md').read_text(),'custom')
+    def test_no_recursive_delete_in_shipped_code(self):
+        # Installers and builders replace by rename and keep backups; they never delete trees.
+        for path in [*ROOT.glob('scripts/*.py'), *ROOT.glob('src/clearwrite/*.py')]:
+            self.assertNotIn('rmtree', path.read_text(encoding='utf-8'), path)
     def test_claude_code_skill_install(self):
         r=INSTALL.install(host='claude',home=self.home,apply=True)
         self.assertTrue(Path(r['destination']).samefile(self.home/'.claude/skills/clearwrite'));self.assertEqual(r['host'],'claude')

@@ -85,8 +85,9 @@ def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
     if not apply:return report
     if changed:
         target.parent.mkdir(parents=True,exist_ok=True)
-        staged=Path(tempfile.mkdtemp(prefix='.clearwrite-stage-',dir=target.parent))
-        shutil.rmtree(staged)
+        # A fresh unique name, so nothing has to be deleted first (no recursive delete anywhere).
+        staged=target.parent/f'.clearwrite-stage-{time.time_ns()}-{os.getpid()}'
+        if staged.exists():raise ValueError('임시 설치 폴더 이름이 겹칩니다. 다시 실행하세요.')
         shutil.copytree(source,staged,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
         if target.exists():
             backup_dir.mkdir(parents=True,exist_ok=True)
