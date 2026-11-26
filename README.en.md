@@ -31,7 +31,7 @@ This is an unsigned portable beta. Do not disable OS security protections to run
 - Model style scores with actual quotation evidence, checked against the input.
 - Actual applied-character change rates and counts.
 - TXT export and a JSON report containing source, edits, checks and completed assessments.
-- Editor personas that set intervention strength and register: `proofreader` (light), `editor` (default), `formal`, `columnist`, `plain` and `friendly`. Stronger personas allow up to 50% change and keep passing edits when one is gated; every persona keeps the same preservation checks.
+- Editor personas that set intervention strength and register: `proofreader` (light), `editor` (default), `formal`, `columnist`, `plain`, `friendly` and `natural` (restructures sentences and drops information-free teaser or wrap-up sentences; number, scope and claim checks stay, and the document keeps at least 75% of its length). Stronger personas allow up to 50% change and keep passing edits when one is gated; every persona keeps the same preservation checks.
 - A separate grammar style (`--style keep|hamnida|haeyo|handa`) unifies Korean sentence endings; reports show how many sentences end in the target register (a rule-based count that skips quotes, code and headings).
 - The skill reviews paragraph roles, references, grammar and terminology, then checks the applied text for omissions and unsupported additions. [Decision examples](skills/clearwrite/references/editing_examples.md) include valid edits and cases to leave unchanged. Expanded mechanical guards catch common unit/magnitude changes and selected scope, approximation, exception and correlation/causation changes; they do not prove semantic equivalence or better reader comprehension.
 

@@ -17,7 +17,7 @@ from .core import InputError, MODES, analyze, apply_plan, checked_text, make_pla
 from .io import strict_json
 from .jobs import BusyError, Jobs
 from .model_cli import backend_status, model_plan, model_style
-from .personas import DEFAULT_PERSONA, INTENSITIES, PERSONAS, edit_budget, get_persona, resolve_style
+from .personas import DEFAULT_PERSONA, INTENSITIES, PERSONAS, edit_budget, gate_options, get_persona, resolve_style
 from .styles import KEEP, STYLES, conformance
 from .providers import ProviderError
 
@@ -70,11 +70,12 @@ def rewrite_job(data: dict, cancel: threading.Event) -> dict:
     plan = make_plan(text, mode='preserve') if mode == 'preserve' else model_plan(
         text, backend=backend, allow_model=True, model=model, mode=mode, cancel=cancel,
         persona=persona.id, style=style.id)
-    result = apply_plan(text, plan, max_change=max_change, policy=policy)
+    gates = gate_options(persona)
+    result = apply_plan(text, plan, max_change=max_change, policy=policy, **gates)
     result.update(comparison(text, result))
     result.update(backend='preserve' if mode == 'preserve' else backend, source_text=text, demonstration=False,
                   model_requests=0 if mode == 'preserve' else None, cli_runs=0 if mode == 'preserve' else 1,
-                  persona=persona.public(), edit_budget={'max_change': max_change, 'policy': policy},
+                  persona=persona.public(), edit_budget={'max_change': max_change, 'policy': policy}, gates=gates,
                   style=style.public())
     if style.id != KEEP and mode != 'preserve':
         result['style_conformance'] = {'before': conformance(text, style.id), 'after': conformance(result['text'], style.id)}

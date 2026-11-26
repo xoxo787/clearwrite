@@ -139,6 +139,7 @@ ClearWrite는 글의 뜻과 말투를 유지하면서 **필요한 만큼 다듬�
 | 칼럼니스트 `columnist` | 적극적으로 | 관점은 지키되 문장을 재구성해 흐름을 살립니다. |
 | 쉬운 말 해설가 `plain` | 적극적으로 | 긴 문장을 나누고 어려운 낱말을 쉬운 말로 바꿉니다. |
 | 다정한 안내자 `friendly` | 적극적으로 · 말투 변경 | 해요체로 바꿔 부드럽게 씁니다. |
+| 자연스러운 글 편집자 `natural` | 적극적으로 · 구조 변경 | 문장 순서와 연결을 다시 짜고 정보 없는 예고·감상 문장과 상투적 묘사를 덜어 냅니다. 숫자·조건 검사는 그대로이고 분량은 75% 이상 유지합니다. |
 
 **문법 스타일**은 페르소나와 따로 고릅니다. 종결어미를 `합니다체`·`해요체`·`한다체`로 통일하거나 `원문 유지`를 선택합니다. 고르지 않으면 페르소나 기본값을 따릅니다(격식 있는 보고자는 합니다체, 다정한 안내자는 해요체, 나머지는 원문 유지). 예를 들어 "칼럼니스트처럼 과감하게, 한다체로"를 고를 수 있습니다. 결과에는 목표 어미로 끝난 문장의 비율(예: 20문장 중 19문장, 95%)을 함께 보여줍니다. 이 비율은 문장 끝 어미만 보는 규칙 판정이며 인용·코드·제목은 세지 않습니다.
 
@@ -168,7 +169,7 @@ ClearWrite는 글의 뜻과 말투를 유지하면서 **필요한 만큼 다듬�
 # 로그인된 Codex CLI로 윤문
 python rewrite.py rewrite input.txt --backend codex --allow-model -o edited.txt --report report.json
 
-# 페르소나로 개입 강도·말투 선택 (proofreader / editor / formal / columnist / plain / friendly)
+# 페르소나로 개입 강도·말투 선택 (proofreader / editor / formal / columnist / plain / friendly / natural)
 python rewrite.py rewrite input.txt --backend claude --allow-model --persona columnist -o edited.txt
 
 # 문법 스타일 따로 선택 (keep / hamnida / haeyo / handa)
