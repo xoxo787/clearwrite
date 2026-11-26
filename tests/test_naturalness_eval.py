@@ -162,6 +162,18 @@ class ExcerptTests(unittest.TestCase):
         self.assertLessEqual(max(len(a), len(b)), 30)
         self.assertIn("고친 문장이다.", b)
 
+    def test_sides_cover_the_same_passage_when_a_boundary_merges(self):
+        self.assertEqual(NE.aligned_excerpts("A. B.", "A B.", 2), ("A. B.", "A B."))
+
+    def test_standalone_punctuation_is_kept(self):
+        self.assertEqual(NE.aligned_excerpts("Hi. !!!", "Hi. !!!", 50), ("Hi. !!!", "Hi. !!!"))
+
+    def test_small_edit_in_long_repetitive_text_stays_small(self):
+        base = "A. " * 1400 + "X. " + "A. " * 1400
+        a, b = NE.aligned_excerpts(base, base.replace("X.", "Y."), 10)
+        self.assertLessEqual(max(len(a), len(b)), 10)
+        self.assertTrue(a.startswith("X.") and b.startswith("Y."))
+
     def test_lead_excerpt_is_whole_sentences_within_limit(self):
         self.assertEqual(NE.lead_excerpt(self.BASE, 25), "첫 문장은 그대로다. 둘째 문장도 그대로다.")
         self.assertEqual(NE.lead_excerpt("한 문장뿐인 아주 긴 글이다", 5), "한 문장뿐인 아주 긴 글이다")

@@ -72,7 +72,8 @@ def degrade(text: str) -> str:
 # A terminator followed directly by a non-space character (3.14, 1.5배, 「안녕.」이라고) is
 # not a sentence end; closing quotes and brackets stay with the sentence they close.
 SENTENCE_SPAN = re.compile(
-    r"(?:[^.!?\n]|[.!?]+[\"'”’)\]」』〉》]*(?=[^\s.!?]))+(?:[.!?]+[\"'”’)\]」』〉》]*)?[ \t]*\n*|\n+")
+    r"(?:[^.!?\n]|[.!?]+[\"'”’)\]」』〉》]*(?=[^\s.!?]))+(?:[.!?]+[\"'”’)\]」』〉》]*)?[ \t]*\n*"
+    r"|[.!?]+[\"'”’)\]」』〉》]*[ \t]*\n*|\n+")
 
 
 def sentence_spans(text: str) -> list[tuple[int, int]]:
@@ -115,43 +116,53 @@ def aligned_excerpts(base: str, other: str, max_chars: int) -> tuple[str, str]:
 
     Context is added only while both sides stay near max_chars, so neither version gets a
     systematically longer excerpt. A change larger than max_chars is shown whole."""
-    long_input = len(base) + len(other) > 8000
-    ops = difflib.SequenceMatcher(None, base, other, autojunk=long_input).get_opcodes()
+    # autojunk stays off: on long repetitive text it turns a one-word edit into a huge change.
+    ops = difflib.SequenceMatcher(None, base, other, autojunk=False).get_opcodes()
     first = next((op for op in ops if op[0] != "equal"), None)
     if first is None:
         return lead_excerpt(base, max_chars), lead_excerpt(other, max_chars)
+    back = [(tag, j1, j2, i1, i2) for tag, i1, i2, j1, j2 in ops]
     b_spans, o_spans = sentence_spans(base), sentence_spans(other)
 
-    def window(lo: int, hi: int) -> tuple[str, str]:
-        start, end = b_spans[lo][0], b_spans[hi][1]
-        o_start, o_end = _map(ops, start, False), _map(ops, end, True)
-        o_start = max((a for a, _ in o_spans if a <= o_start), default=0)
-        o_end = min((b for _, b in o_spans if b >= o_end), default=len(other))
-        return base[start:end].strip(), other[o_start:o_end].strip()
+    def first_at(spans: list[tuple[int, int]], pos: int) -> int:
+        return max((i for i, (a, _) in enumerate(spans) if a <= pos), default=0)
+
+    def last_at(spans: list[tuple[int, int]], pos: int) -> int:
+        return min((i for i, (_, b) in enumerate(spans) if b >= pos), default=len(spans) - 1)
+
+    def window(lo: int, hi: int) -> tuple[int, int, str, str]:
+        """Grow both sides until each covers whole sentences that map onto each other."""
+        for _ in range(len(b_spans) + len(o_spans)):
+            start, end = b_spans[lo][0], b_spans[hi][1]
+            olo = first_at(o_spans, _map(ops, start, False))
+            ohi = last_at(o_spans, _map(ops, end, True))
+            o_start, o_end = o_spans[olo][0], o_spans[ohi][1]
+            nlo = min(lo, first_at(b_spans, _map(back, o_start, False)))
+            nhi = max(hi, last_at(b_spans, _map(back, o_end, True)))
+            if (nlo, nhi) == (lo, hi):
+                break
+            lo, hi = nlo, nhi
+        return lo, hi, base[b_spans[lo][0]:b_spans[hi][1]].strip(), other[o_start:o_end].strip()
 
     _, i1, i2, j1, j2 = first
-    lo = _sentence_at(b_spans, i1)
-    hi = _sentence_at(b_spans, max(i1, i2 - 1))
-    # The other side's change must be whole too: extend until its mapped window covers j2.
-    while hi + 1 < len(b_spans) and _map(ops, b_spans[hi][1], True) < j2:
-        hi += 1
+    lo, hi, a, b = window(_sentence_at(b_spans, i1), _sentence_at(b_spans, max(i1, i2 - 1)))
     # A pure deletion or insertion would leave one side empty: keep unchanged sentences of
     # context until both sides show readable text.
-    while not all(window(lo, hi)) and (lo > 0 or hi + 1 < len(b_spans)):
-        lo, hi = (lo - 1, hi) if lo > 0 else (lo, hi + 1)
-    best = window(lo, hi)
+    while not (a and b) and (lo > 0 or hi + 1 < len(b_spans)):
+        lo, hi, a, b = window(lo - 1, hi) if lo > 0 else window(lo, hi + 1)
+    # Add context only while both sides stay within max_chars.
     for step in ("after", "before"):
         while True:
             nlo, nhi = (lo, hi + 1) if step == "after" else (lo - 1, hi)
             if nlo < 0 or nhi >= len(b_spans):
                 break
-            cand = window(nlo, nhi)
-            if max(len(cand[0]), len(cand[1])) > max_chars:
+            clo, chi, ca, cb = window(nlo, nhi)
+            if max(len(ca), len(cb)) > max_chars:
                 break
-            lo, hi, best = nlo, nhi, cand
+            lo, hi, a, b = clo, chi, ca, cb
             if step == "before":
                 break
-    return best
+    return a, b
 
 
 def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variants_dir: Path | None,
