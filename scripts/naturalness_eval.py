@@ -175,16 +175,18 @@ def diff_segments(left: str, right: str) -> tuple[list[list[Any]], list[list[Any
     out_a: list[list[Any]] = []
     out_b: list[list[Any]] = []
 
-    def push(out: list[list[Any]], tokens: list[str], marked: bool) -> None:
+    def push(out: list[list[Any]], tokens: list[str], marked: bool, spaces_only: bool) -> None:
         for tok in tokens:
-            flag = marked and not tok.isspace()
+            # Spaces are marked only when spacing is the whole difference, so it stays visible.
+            flag = marked and (spaces_only or not tok.isspace())
             if out and out[-1][1] == flag:
                 out[-1][0] += tok
             else:
                 out.append([tok, flag])
     for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
-        push(out_a, a[i1:i2], tag != "equal")
-        push(out_b, b[j1:j2], tag != "equal")
+        spaces_only = tag != "equal" and all(t.isspace() for t in a[i1:i2] + b[j1:j2])
+        push(out_a, a[i1:i2], tag != "equal", spaces_only)
+        push(out_b, b[j1:j2], tag != "equal", spaces_only)
     return out_a, out_b
 
 
@@ -285,12 +287,14 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
     sessions: list[list[dict[str, Any]]] = [[] for _ in range(n_sessions)]
     for i, pair in enumerate(pool):
         sessions[i % n_sessions].append(pair)
+    # A repeat always shows the opposite side order of its original, so a side habit cannot
+    # pass as consistency.
+    flipped = {p["item"]: rng.random() < .5 for p in main}
     for pair in repeats:
         home = next(k for k, s in enumerate(sessions) if any(p.get("item") == pair["item"] and p["type"] == "main" for p in s))
-        # Prefer a later session with room, to weaken recall; never exceed session_size when avoidable.
-        order = [(home + d) % n_sessions for d in range(1, n_sessions)] + [home]
-        target = next((k for k in order if len(sessions[k]) < session_size), order[0])
-        sessions[target].append(pair)
+        # A later session with room weakens recall; never an earlier session than the original.
+        later = [k for k in range(home + 1, n_sessions) if len(sessions[k]) < session_size]
+        sessions[later[0] if later else home].append(pair)
     out = []
     for s_index, session in enumerate(sessions, 1):
         base = [p for p in session if p["type"] != "repeat"]
@@ -307,7 +311,12 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
         session = base
         built = []
         for n, pair in enumerate(session, 1):
-            swap = rng.random() < .5
+            if pair["type"] == "main":
+                swap = flipped[pair["item"]]
+            elif pair["type"] == "repeat":
+                swap = not flipped[pair["item"]]
+            else:
+                swap = rng.random() < .5
             texts = pair["texts"][::-1] if swap else pair["texts"]
             variants = pair["variants"][::-1] if swap else pair["variants"]
             built.append({"pair_id": f"s{s_index:02d}p{n:02d}", "type": pair["type"], "item": pair["item"],
@@ -330,7 +339,9 @@ def session_html(session_id: str, pairs: list[dict[str, Any]], *, highlight: boo
         segs = diff_segments(left, right) if highlight else ([[left, False]], [[right, False]])
         public.append({"pair_id": p["pair_id"], "left": segs[0], "right": segs[1]})
     data = json.dumps({"session_id": session_id, "question": QUESTION, "pairs": public}, ensure_ascii=False)
-    data = data.replace("</", "<\\/").replace("<!--", "<\\!--")
+    # Every "<" becomes the JSON escape <: valid JSON, and the HTML parser never sees
+    # "</script>" or "<!--" inside the data block.
+    data = data.replace("<", "\\u003c")
     title = html.escape(f"자연스러움 비교 {session_id}")
     return f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -374,7 +385,15 @@ mark{{background:#ffe58a;color:inherit;border-radius:3px;padding:0 1px}}
   const S = JSON.parse(document.getElementById('session-data').textContent);
   const KEY = 'clearwrite-naturalness-' + S.session_id;
   let state = {{index: 0, answers: {{}}}};
-  try {{ const saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved && saved.answers) state = saved; }} catch (e) {{}}
+  try {{
+    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved && saved.answers) {{
+      const ids = new Set(S.pairs.map(p => p.pair_id));
+      const answers = {{}};
+      for (const [k, v] of Object.entries(saved.answers)) if (ids.has(k)) answers[k] = v;
+      state = {{index: Math.min(Math.max(0, saved.index | 0), S.pairs.length), answers}};
+    }}
+  }} catch (e) {{}}
   const $ = (id) => document.getElementById(id);
   $('question').textContent = S.question;
   let shownAt = Date.now();
@@ -472,6 +491,9 @@ def score(key: dict[str, Any], results: list[dict[str, Any]], *, candidate: str,
     control_rate = control_ok / len(controls) if controls else None
     consistency = consistent / len(repeats) if repeats else None
     problems = []
+    # Every main pair must be answered: dropping unfavourable pairs would bias the result.
+    if len(answered_main) < sum(p["type"] == "main" for p in pairs.values()):
+        problems.append("main_pairs_incomplete")
     if len(controls) < expected_controls:
         problems.append("attention_checks_incomplete")
     elif control_rate is not None and control_rate < min_control:

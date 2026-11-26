@@ -87,6 +87,19 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(human["text"], self.f.items[p["item"]]["text"])
             self.assertIn(NE.CONTROL_CLOSING, degraded["text"])
 
+    def test_repeats_flip_sides_and_never_come_earlier(self):
+        for seed in range(25):
+            built = self.run_build(seed=seed, session_size=6)
+            where = {}
+            for s_index, session in enumerate(built["sessions"]):
+                for p in session:
+                    if p["type"] in ("main", "repeat"):
+                        where.setdefault(p["item"], {})[p["type"]] = (s_index, p["left"]["variant"])
+            for item, seen in where.items():
+                if "repeat" in seen:
+                    self.assertNotEqual(seen["main"][1], seen["repeat"][1], (seed, item))
+                    self.assertGreaterEqual(seen["repeat"][0], seen["main"][0], (seed, item))
+
     def test_session_size_is_a_maximum(self):
         for size in (4, 6, 9):
             built = self.run_build(session_size=size)
@@ -226,6 +239,21 @@ class ReadabilityTests(unittest.TestCase):
         self.assertEqual([t for t, m in right if m], ["저녁에"])
         self.assertTrue(all(not t.isspace() for t, m in left + right if m))
 
+    def test_spacing_only_difference_is_still_marked(self):
+        left, right = NE.diff_segments("가 나", "가  나")
+        self.assertTrue(any(m for _, m in left) and any(m for _, m in right))
+
+    def test_markup_in_texts_keeps_the_page_valid(self):
+        import re as _re
+        pair = {"pair_id": "s01p01", "type": "main", "item": "x",
+                "left": {"variant": "a", "text": "<!-- 주석 --> 앞 </script><script>alert(1)</script>"},
+                "right": {"variant": "b", "text": "뒤 <b>굵게</b>"}}
+        page = NE.session_html("1-01-x", [pair])
+        data = _re.search(r'<script id="session-data" type="application/json">(.*?)</script>', page, _re.S).group(1)
+        self.assertNotIn("<", data)
+        payload = json.loads(data)
+        self.assertEqual("".join(t for t, _ in payload["pairs"][0]["left"]), pair["left"]["text"])
+
     def test_highlight_can_be_turned_off(self):
         pair = {"pair_id": "s01p01", "type": "main", "item": "x", "left": {"variant": "a", "text": "가 나"}, "right": {"variant": "b", "text": "가 다"}}
         page = NE.session_html("1-01-x", [pair], highlight=False)
@@ -357,6 +385,13 @@ class ScoreTests(unittest.TestCase):
         r = NE.score(key, results, candidate="edited")
         self.assertEqual(r["attention_checks"]["passed"], 2)
         self.assertIn("attention_checks_failed", r["problems"])
+
+    def test_skipping_main_pairs_invalidates_the_session(self):
+        key, results = self.key_and_answers()
+        results[0]["answers"] = [a for a in results[0]["answers"] if a["pair_id"] not in {"m18", "m19"}]
+        r = NE.score(key, results, candidate="edited")
+        self.assertIn("main_pairs_incomplete", r["problems"])
+        self.assertEqual(r["decision"], "invalid_session")
 
     def test_unanswered_checks_invalidate_the_session(self):
         key, results = self.key_and_answers()
