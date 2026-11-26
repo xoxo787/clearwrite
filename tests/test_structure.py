@@ -79,14 +79,16 @@ class PersonaTests(unittest.TestCase):
         self.assertNotIn("한 편집은 한 문장을 넘지 않게", text)
         self.assertIn("부정·가능성·조건", text)
 
-    def test_natural_is_subtractive(self):
+    def test_natural_edits_only_diagnosed_spans(self):
         guidance = get_persona("natural").guidance
-        for phrase in ["덜어내기가 먼저", "바꾸기만 하는 편집", "원문에 없던 낱말", "편집은 적을수록 좋다"]:
+        for phrase in ["1단계 진단", "진단한 구간만 고친다", "구체성 부족 구간은 고치지 않는다", "동의어 바꾸기", "끼워 넣기"]:
             self.assertIn(phrase, guidance)
         skill = (ROOT / "skills/clearwrite/SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("`delete`, `split`, `tidy`", skill)
+        for rule in ["`cliche`", "`exposition`", "`purple`", "`wording`", "`structure`", "`punctuation`", "`consistency`", "`specificity`"]:
+            self.assertIn(rule, skill)
         guide = (ROOT / "skills/clearwrite/references/structure_patterns.md").read_text(encoding="utf-8")
-        self.assertLess(guide.index("## 덜어내기가 먼저"), guide.index("## 패턴별 판단"))
+        self.assertLess(guide.index("## 진단한 구간만 고친다"), guide.index("## 패턴별 판단"))
+        self.assertIn("디테일을 지어내지 말고", guide)
 
     def test_prepare_adds_diagnosis_only_for_natural(self):
         natural, editor = prepare(AI_LIKE, persona="natural"), prepare(AI_LIKE, persona="editor")
