@@ -69,7 +69,10 @@ def degrade(text: str) -> str:
                        if len(paragraphs) > 1 else [CONTROL_OPENING + " " + text + " " + CONTROL_CLOSING])
 
 
-SENTENCE_SPAN = re.compile(r"[^.!?\n]+(?:[.!?]+[\"'”’)\]]*)?[ \t]*\n*|\n+")
+# A terminator followed directly by a non-space character (3.14, 1.5배, 「안녕.」이라고) is
+# not a sentence end; closing quotes and brackets stay with the sentence they close.
+SENTENCE_SPAN = re.compile(
+    r"(?:[^.!?\n]|[.!?]+[\"'”’)\]」』〉》]*(?=[^\s.!?]))+(?:[.!?]+[\"'”’)\]」』〉》]*)?[ \t]*\n*|\n+")
 
 
 def sentence_spans(text: str) -> list[tuple[int, int]]:
@@ -87,34 +90,68 @@ def lead_excerpt(text: str, max_chars: int) -> str:
     return text[spans[0][0]:end].strip()
 
 
+def _sentence_at(spans: list[tuple[int, int]], pos: int) -> int:
+    for i, (a, b) in enumerate(spans):
+        if pos < b:
+            return i
+    return len(spans) - 1
+
+
+def _map(ops: list[tuple[str, int, int, int, int]], pos: int, at_end: bool) -> int:
+    """Map a base offset to the other text, taking every opcode that touches it so that an
+    insertion exactly at the boundary is inside the window."""
+    hits = []
+    for tag, i1, i2, j1, j2 in ops:
+        if i1 <= pos <= i2:
+            hits.append(j1 + (pos - i1) if tag == "equal" else (j2 if at_end else j1))
+    if not hits:
+        return ops[-1][4] if at_end else 0
+    return max(hits) if at_end else min(hits)
+
+
 def aligned_excerpts(base: str, other: str, max_chars: int) -> tuple[str, str]:
-    """The same passage of two versions: whole sentences of `base` around its first change,
-    and the matching sentences of `other`. Shorter pairs keep a long session readable."""
-    ops = difflib.SequenceMatcher(None, base, other, autojunk=False).get_opcodes()
+    """The same passage of two versions: whole sentences around the first change, covering
+    that whole change on both sides, then matched to whole sentences of the other version.
+
+    Context is added only while both sides stay near max_chars, so neither version gets a
+    systematically longer excerpt. A change larger than max_chars is shown whole."""
+    long_input = len(base) + len(other) > 8000
+    ops = difflib.SequenceMatcher(None, base, other, autojunk=long_input).get_opcodes()
     first = next((op for op in ops if op[0] != "equal"), None)
     if first is None:
         return lead_excerpt(base, max_chars), lead_excerpt(other, max_chars)
-    spans = sentence_spans(base)
-    k = next((i for i, (a, b) in enumerate(spans) if a <= first[1] < b or first[1] <= a), len(spans) - 1)
-    lo, hi = k, k
-    while hi + 1 < len(spans) and spans[hi + 1][1] - spans[lo][0] <= max_chars:
-        hi += 1
-    if lo > 0 and spans[hi][1] - spans[lo - 1][0] <= max_chars:
-        lo -= 1
-    start, end = spans[lo][0], spans[hi][1]
+    b_spans, o_spans = sentence_spans(base), sentence_spans(other)
 
-    def mapped(pos: int, at_end: bool) -> int:
-        for tag, i1, i2, j1, j2 in ops:
-            if i1 <= pos <= i2 and (i1 < i2 or tag != "equal"):
-                if tag == "equal":
-                    return j1 + (pos - i1)
-                return j2 if at_end else j1
-        return len(other) if at_end else 0
-    o_spans = sentence_spans(other)
-    o_start, o_end = mapped(start, False), mapped(end, True)
-    o_start = max((a for a, _ in o_spans if a <= o_start), default=0)
-    o_end = min((b for _, b in o_spans if b >= o_end), default=len(other))
-    return base[start:end].strip(), other[o_start:o_end].strip()
+    def window(lo: int, hi: int) -> tuple[str, str]:
+        start, end = b_spans[lo][0], b_spans[hi][1]
+        o_start, o_end = _map(ops, start, False), _map(ops, end, True)
+        o_start = max((a for a, _ in o_spans if a <= o_start), default=0)
+        o_end = min((b for _, b in o_spans if b >= o_end), default=len(other))
+        return base[start:end].strip(), other[o_start:o_end].strip()
+
+    _, i1, i2, j1, j2 = first
+    lo = _sentence_at(b_spans, i1)
+    hi = _sentence_at(b_spans, max(i1, i2 - 1))
+    # The other side's change must be whole too: extend until its mapped window covers j2.
+    while hi + 1 < len(b_spans) and _map(ops, b_spans[hi][1], True) < j2:
+        hi += 1
+    # A pure deletion or insertion would leave one side empty: keep unchanged sentences of
+    # context until both sides show readable text.
+    while not all(window(lo, hi)) and (lo > 0 or hi + 1 < len(b_spans)):
+        lo, hi = (lo - 1, hi) if lo > 0 else (lo, hi + 1)
+    best = window(lo, hi)
+    for step in ("after", "before"):
+        while True:
+            nlo, nhi = (lo, hi + 1) if step == "after" else (lo - 1, hi)
+            if nlo < 0 or nhi >= len(b_spans):
+                break
+            cand = window(nlo, nhi)
+            if max(len(cand[0]), len(cand[1])) > max_chars:
+                break
+            lo, hi, best = nlo, nhi, cand
+            if step == "before":
+                break
+    return best
 
 
 def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variants_dir: Path | None,

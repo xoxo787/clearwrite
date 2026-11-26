@@ -136,6 +136,32 @@ class ExcerptTests(unittest.TestCase):
         self.assertTrue(a.startswith("아주 긴 문장") and a.endswith("끝."))
         self.assertTrue(b.endswith("마침."))
 
+    def test_text_appended_at_the_end_is_shown(self):
+        a, b = NE.aligned_excerpts("A 문장이다.", "A 문장이다. X를 덧붙였다.", 80)
+        self.assertEqual((a, b), ("A 문장이다.", "A 문장이다. X를 덧붙였다."))
+
+    def test_multi_sentence_deletion_is_shown_whole_with_context(self):
+        cut = "지울 문장 하나는 사십 자쯤 되는 꽤 긴 문장이다. " * 3
+        base = "첫째 문장은 그대로 둔다. " + cut + "마지막 문장은 남는다."
+        a, b = NE.aligned_excerpts(base, "첫째 문장은 그대로 둔다. 마지막 문장은 남는다.", 60)
+        self.assertEqual(a.count("지울 문장"), 3)
+        self.assertTrue(b)
+        self.assertNotIn("지울 문장", b)
+
+    def test_sentences_do_not_split_inside_numbers_or_quotes(self):
+        for text, expected in [("가격은 3.14원이다. 다음 문장.", 2), ("그가 「안녕.」이라고 말했다. 끝.", 2),
+                               ("“정말요?”라고 물었다. 그렇다!", 2), ("1.5배 늘었다.", 1)]:
+            pieces = [text[a:b].strip() for a, b in NE.sentence_spans(text)]
+            self.assertEqual(len(pieces), expected, pieces)
+            self.assertTrue(all(p.endswith((".", "!", "?")) for p in pieces), pieces)
+
+    def test_context_is_added_only_while_both_sides_fit(self):
+        base = "짧다. " * 6 + "고친다. 끝난다."
+        other = base.replace("고친다.", "고친 문장이다.")
+        a, b = NE.aligned_excerpts(base, other, 30)
+        self.assertLessEqual(max(len(a), len(b)), 30)
+        self.assertIn("고친 문장이다.", b)
+
     def test_lead_excerpt_is_whole_sentences_within_limit(self):
         self.assertEqual(NE.lead_excerpt(self.BASE, 25), "첫 문장은 그대로다. 둘째 문장도 그대로다.")
         self.assertEqual(NE.lead_excerpt("한 문장뿐인 아주 긴 글이다", 5), "한 문장뿐인 아주 긴 글이다")
