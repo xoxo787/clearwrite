@@ -117,6 +117,49 @@ class BuildTests(unittest.TestCase):
         self.assertIn({"id": "ai00", "reason": "identical"}, self.run_build()["skipped"])
 
 
+class ExcerptTests(unittest.TestCase):
+    BASE = ("첫 문장은 그대로다. 둘째 문장도 그대로다. 셋째 문장에서 고친 말이 나온다. "
+            "넷째 문장은 길게 이어지는 설명이다. 다섯째 문장으로 끝난다.")
+    OTHER = BASE.replace("고친 말이 나온다", "바뀐 표현이 보인다")
+
+    def test_excerpt_holds_the_change_and_matches_on_both_sides(self):
+        a, b = NE.aligned_excerpts(self.BASE, self.OTHER, 60)
+        self.assertIn("고친 말이 나온다", a)
+        self.assertIn("바뀐 표현이 보인다", b)
+        self.assertEqual(a.replace("고친 말이 나온다", "바뀐 표현이 보인다"), b)
+        self.assertTrue(a.endswith(".") and b.endswith("."))
+        self.assertLess(len(a), len(self.BASE))
+
+    def test_excerpt_keeps_whole_sentences_even_if_one_is_long(self):
+        long = "아주 긴 문장 " * 30 + "끝."
+        a, b = NE.aligned_excerpts(long + " 다음 문장.", long.replace("끝", "마침") + " 다음 문장.", 60)
+        self.assertTrue(a.startswith("아주 긴 문장") and a.endswith("끝."))
+        self.assertTrue(b.endswith("마침."))
+
+    def test_lead_excerpt_is_whole_sentences_within_limit(self):
+        self.assertEqual(NE.lead_excerpt(self.BASE, 25), "첫 문장은 그대로다. 둘째 문장도 그대로다.")
+        self.assertEqual(NE.lead_excerpt("한 문장뿐인 아주 긴 글이다", 5), "한 문장뿐인 아주 긴 글이다")
+
+    def test_build_with_max_chars_shortens_pairs_and_controls(self):
+        f = Fixture(n_ai=6, n_human=4)
+        try:
+            for k, item in f.items.items():
+                if item["kind"] == "ai":
+                    long = item["text"] + " " + "이어지는 설명 문장이다. " * 20
+                    item["text"] = long
+                    (f.variants / "edited" / f"{k}.txt").write_bytes(long.replace("둘째 문단", "두 번째 문단").encode())
+            full = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=2)
+            short = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=2, max_chars=80)
+            longest = lambda b: max(len(p[s]["text"]) for x in b["sessions"] for p in x for s in ("left", "right"))
+            self.assertLess(longest(short), longest(full) / 2)
+            mains = [p for s in short["sessions"] for p in s if p["type"] == "main"]
+            self.assertTrue(mains and all(p["left"]["text"] != p["right"]["text"] for p in mains))
+            with self.assertRaises(ValueError):
+                NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=2, max_chars=10)
+        finally:
+            f.close()
+
+
 class HtmlTests(unittest.TestCase):
     def test_page_has_texts_but_no_key_and_escapes_markup(self):
         pairs = [{"pair_id": "s01p01", "type": "main", "item": "secret-item-id",
