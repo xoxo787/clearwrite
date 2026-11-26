@@ -210,8 +210,50 @@ class HtmlTests(unittest.TestCase):
         self.assertEqual(page.count("</script>"), 2)
         data = re.search(r'<script id="session-data" type="application/json">(.*?)</script>', page, re.S).group(1)
         payload = json.loads(data.replace("<\\/", "</").replace("<\\!--", "<!--"))
-        self.assertEqual(payload["pairs"][0]["left"], "</script><script>alert(1)</script> 왼쪽")
+        self.assertEqual("".join(t for t, _ in payload["pairs"][0]["left"]), "</script><script>alert(1)</script> 왼쪽")
+        self.assertNotIn("innerHTML", page)
+        self.assertIn('id="pick-same"', page)
+        self.assertIn("집중도 확인용", page)
         self.assertIn(NE.QUESTION, data)
+
+
+class ReadabilityTests(unittest.TestCase):
+    def test_diff_segments_mark_only_changed_words_on_both_sides(self):
+        left, right = NE.diff_segments("나는 아침에 학교에 갔다.", "나는 저녁에 학교에 갔다.")
+        self.assertEqual("".join(t for t, _ in left), "나는 아침에 학교에 갔다.")
+        self.assertEqual("".join(t for t, _ in right), "나는 저녁에 학교에 갔다.")
+        self.assertEqual([t for t, m in left if m], ["아침에"])
+        self.assertEqual([t for t, m in right if m], ["저녁에"])
+        self.assertTrue(all(not t.isspace() for t, m in left + right if m))
+
+    def test_highlight_can_be_turned_off(self):
+        pair = {"pair_id": "s01p01", "type": "main", "item": "x", "left": {"variant": "a", "text": "가 나"}, "right": {"variant": "b", "text": "가 다"}}
+        page = NE.session_html("1-01-x", [pair], highlight=False)
+        self.assertIn('[["가 나", false]]', page)
+
+    def test_tiny_differences_are_skipped(self):
+        f = Fixture(n_ai=4, n_human=2)
+        try:
+            for k, item in f.items.items():
+                if item["kind"] == "ai":
+                    long = item["text"] + " 이어지는 설명 문장이 길게 붙어 있다." * 6
+                    item["text"] = long
+                    (f.variants / "edited" / f"{k}.txt").write_bytes((long[:-1] + "!").encode())
+            built = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=1, min_diff=.03)
+            self.assertEqual({s["reason"] for s in built["skipped"]}, {"tiny_difference"})
+            self.assertFalse([p for s in built["sessions"] for p in s if p["type"] == "main"])
+            with self.assertRaises(ValueError):
+                NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=1, min_diff=.9)
+        finally:
+            f.close()
+
+    def test_default_session_size_is_twelve(self):
+        f = Fixture(n_ai=30, n_human=4)
+        try:
+            built = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=1)
+            self.assertTrue(all(len(s) <= 12 for s in built["sessions"]))
+        finally:
+            f.close()
 
 
 class ScoreTests(unittest.TestCase):
@@ -256,6 +298,24 @@ class ScoreTests(unittest.TestCase):
     def test_not_enough_wins_is_not_shown(self):
         key, results = self.key_and_answers(candidate_wins=12)
         self.assertEqual(NE.score(key, results, candidate="edited")["decision"], "not_shown")
+
+    def test_ties_are_reported_and_left_out_of_the_count(self):
+        key, results = self.key_and_answers(candidate_wins=15)
+        for a in results[0]["answers"]:
+            if a["pair_id"] in {"m15", "m16", "m17"}:
+                a["choice"] = "same"
+        r = NE.score(key, results, candidate="edited")
+        self.assertEqual((r["main_pairs"], r["ties"], r["candidate_wins"]), (17, 3, 15))
+        self.assertEqual(r["wins_needed_for_alpha"], NE.required_wins(17))
+
+    def test_tie_on_an_attention_check_fails_it(self):
+        key, results = self.key_and_answers()
+        for a in results[0]["answers"]:
+            if a["pair_id"] in {"c0", "c1"}:
+                a["choice"] = "same"
+        r = NE.score(key, results, candidate="edited")
+        self.assertEqual(r["attention_checks"]["passed"], 2)
+        self.assertIn("attention_checks_failed", r["problems"])
 
     def test_unanswered_checks_invalidate_the_session(self):
         key, results = self.key_and_answers()
