@@ -11,6 +11,7 @@ reader's preference, not authorship, AI probability or detector evasion.
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import html
 import json
@@ -68,10 +69,108 @@ def degrade(text: str) -> str:
                        if len(paragraphs) > 1 else [CONTROL_OPENING + " " + text + " " + CONTROL_CLOSING])
 
 
+# A terminator followed directly by a non-space character (3.14, 1.5배, 「안녕.」이라고) is
+# not a sentence end; closing quotes and brackets stay with the sentence they close.
+SENTENCE_SPAN = re.compile(
+    r"(?:[^.!?\n]|[.!?]+[\"'”’)\]」』〉》]*(?=[^\s.!?]))+(?:[.!?]+[\"'”’)\]」』〉》]*)?[ \t]*\n*"
+    r"|[.!?]+[\"'”’)\]」』〉》]*[ \t]*\n*|\n+")
+
+
+def sentence_spans(text: str) -> list[tuple[int, int]]:
+    spans = [(m.start(), m.end()) for m in SENTENCE_SPAN.finditer(text) if m.group().strip()]
+    return spans or [(0, len(text))]
+
+
+def lead_excerpt(text: str, max_chars: int) -> str:
+    """Whole sentences from the start, at most max_chars (always at least one sentence)."""
+    spans, end = sentence_spans(text), None
+    for a, b in spans:
+        if end is not None and b - spans[0][0] > max_chars:
+            break
+        end = b
+    return text[spans[0][0]:end].strip()
+
+
+def _sentence_at(spans: list[tuple[int, int]], pos: int) -> int:
+    for i, (a, b) in enumerate(spans):
+        if pos < b:
+            return i
+    return len(spans) - 1
+
+
+def _map(ops: list[tuple[str, int, int, int, int]], pos: int, at_end: bool) -> int:
+    """Map a base offset to the other text, taking every opcode that touches it so that an
+    insertion exactly at the boundary is inside the window."""
+    hits = []
+    for tag, i1, i2, j1, j2 in ops:
+        if i1 <= pos <= i2:
+            hits.append(j1 + (pos - i1) if tag == "equal" else (j2 if at_end else j1))
+    if not hits:
+        return ops[-1][4] if at_end else 0
+    return max(hits) if at_end else min(hits)
+
+
+def aligned_excerpts(base: str, other: str, max_chars: int) -> tuple[str, str]:
+    """The same passage of two versions: whole sentences around the first change, covering
+    that whole change on both sides, then matched to whole sentences of the other version.
+
+    Context is added only while both sides stay near max_chars, so neither version gets a
+    systematically longer excerpt. A change larger than max_chars is shown whole."""
+    # autojunk stays off: on long repetitive text it turns a one-word edit into a huge change.
+    ops = difflib.SequenceMatcher(None, base, other, autojunk=False).get_opcodes()
+    first = next((op for op in ops if op[0] != "equal"), None)
+    if first is None:
+        return lead_excerpt(base, max_chars), lead_excerpt(other, max_chars)
+    back = [(tag, j1, j2, i1, i2) for tag, i1, i2, j1, j2 in ops]
+    b_spans, o_spans = sentence_spans(base), sentence_spans(other)
+
+    def first_at(spans: list[tuple[int, int]], pos: int) -> int:
+        return max((i for i, (a, _) in enumerate(spans) if a <= pos), default=0)
+
+    def last_at(spans: list[tuple[int, int]], pos: int) -> int:
+        return min((i for i, (_, b) in enumerate(spans) if b >= pos), default=len(spans) - 1)
+
+    def window(lo: int, hi: int) -> tuple[int, int, str, str]:
+        """Grow both sides until each covers whole sentences that map onto each other."""
+        for _ in range(len(b_spans) + len(o_spans)):
+            start, end = b_spans[lo][0], b_spans[hi][1]
+            olo = first_at(o_spans, _map(ops, start, False))
+            ohi = last_at(o_spans, _map(ops, end, True))
+            o_start, o_end = o_spans[olo][0], o_spans[ohi][1]
+            nlo = min(lo, first_at(b_spans, _map(back, o_start, False)))
+            nhi = max(hi, last_at(b_spans, _map(back, o_end, True)))
+            if (nlo, nhi) == (lo, hi):
+                break
+            lo, hi = nlo, nhi
+        return lo, hi, base[b_spans[lo][0]:b_spans[hi][1]].strip(), other[o_start:o_end].strip()
+
+    _, i1, i2, j1, j2 = first
+    lo, hi, a, b = window(_sentence_at(b_spans, i1), _sentence_at(b_spans, max(i1, i2 - 1)))
+    # A pure deletion or insertion would leave one side empty: keep unchanged sentences of
+    # context until both sides show readable text.
+    while not (a and b) and (lo > 0 or hi + 1 < len(b_spans)):
+        lo, hi, a, b = window(lo - 1, hi) if lo > 0 else window(lo, hi + 1)
+    # Add context only while both sides stay within max_chars.
+    for step in ("after", "before"):
+        while True:
+            nlo, nhi = (lo, hi + 1) if step == "after" else (lo - 1, hi)
+            if nlo < 0 or nhi >= len(b_spans):
+                break
+            clo, chi, ca, cb = window(nlo, nhi)
+            if max(len(ca), len(cb)) > max_chars:
+                break
+            lo, hi, a, b = clo, chi, ca, cb
+            if step == "before":
+                break
+    return a, b
+
+
 def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variants_dir: Path | None,
           seed: int, session_size: int = 24, repeat_share: float = .15, controls: int = 4,
-          only: set[str] | None = None) -> dict[str, Any]:
+          only: set[str] | None = None, max_chars: int | None = None) -> dict[str, Any]:
     """Return {"sessions": [[pair, ...], ...], "skipped": [...]} with pairs carrying their key."""
+    if max_chars is not None and max_chars < 60:
+        raise ValueError("max_chars는 60자 이상이어야 합니다.")
     if not 0 <= repeat_share <= .5 or session_size < 4 or controls < 0:
         raise ValueError("repeat_share 0~0.5, session_size 4 이상, controls 0 이상이어야 합니다.")
     rng = random.Random(seed)
@@ -87,11 +186,18 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
         if a == b:
             skipped.append({"id": item["id"], "reason": "identical"})
             continue
+        if max_chars:
+            a, b = aligned_excerpts(a, b, max_chars)
+            if a == b:
+                skipped.append({"id": item["id"], "reason": "identical_excerpt"})
+                continue
         main.append({"type": "main", "item": item["id"], "variants": [left_variant, right_variant], "texts": [a, b]})
     humans = [i for i in items.values() if i["kind"] == "human"]
     rng.shuffle(humans)
-    checks = [{"type": "control", "item": h["id"], "variants": ["human", "degraded"], "texts": [h["text"], degrade(h["text"])]}
-              for h in humans[:controls]]
+    def control_text(h: dict[str, Any]) -> str:
+        return lead_excerpt(h["text"], max_chars) if max_chars else h["text"]
+    checks = [{"type": "control", "item": h["id"], "variants": ["human", "degraded"],
+               "texts": [control_text(h), degrade(control_text(h))]} for h in humans[:controls]]
     repeats = [dict(p, type="repeat", of=p["item"]) for p in rng.sample(main, round(len(main) * repeat_share))] if main else []
     pool = main + checks
     rng.shuffle(pool)
@@ -310,6 +416,7 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--session-size", type=int, default=24, help="회차당 최대 쌍 수")
     b.add_argument("--repeat-share", type=float, default=.15)
     b.add_argument("--controls", type=int, default=4)
+    b.add_argument("--max-chars", type=int, help="쌍마다 첫 수정 부근의 같은 대목만 문장 단위로 잘라 이 글자 수 안팎으로 보여 줌")
     s = sub.add_parser("score", help="응답 채점")
     s.add_argument("--key", type=Path, required=True)
     s.add_argument("--results", type=Path, nargs="+", required=True)
@@ -329,12 +436,13 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("정답 키 파일이 이미 있습니다. 덮어쓰지 않습니다.")
             items = read_items(args.items)
             built = build(items, compare=compare, variants_dir=args.variants, seed=args.seed,
-                          session_size=args.session_size, repeat_share=args.repeat_share, controls=args.controls)
+                          session_size=args.session_size, repeat_share=args.repeat_share, controls=args.controls,
+                          max_chars=args.max_chars)
             if not any(built["sessions"]):
                 raise ValueError("만들 수 있는 쌍이 없습니다.")
             ids = [session_id(args.seed, n, session) for n, session in enumerate(built["sessions"], 1)]
             pages = [session_html(sid, session) for sid, session in zip(ids, built["sessions"])]
-            meta = {"schema_version": "1.1", "compare": list(compare), "seed": args.seed,
+            meta = {"schema_version": "1.1", "compare": list(compare), "seed": args.seed, "max_chars": args.max_chars,
                     "items_sha256": hashlib.sha256(args.items.read_bytes()).hexdigest(), "skipped": built["skipped"],
                     "session_ids": ids, "sessions": built["sessions"]}
             # The key is written first: a session page without its key would be unscorable.
