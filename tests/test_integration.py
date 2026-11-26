@@ -224,7 +224,8 @@ class BundleInstallTests(unittest.TestCase):
             tree = ast.parse(path.read_text(encoding='utf-8'))
             calls = {n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, 'id', '')
                      for n in ast.walk(tree) if isinstance(n, ast.Call)}
-            self.assertFalse(calls & banned, path)
+            imported = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) for a in n.names}
+            self.assertFalse((calls | imported) & banned, path)
     def test_install_stages_outside_skills_and_retries_name_collisions(self):
         stage = self.home/'.agents/.clearwrite-staging'
         real_copytree = shutil.copytree; seen = []
@@ -241,6 +242,19 @@ class BundleInstallTests(unittest.TestCase):
         self.assertTrue(all(Path(d).parent == stage for d in seen))
         self.assertEqual([p.name for p in (self.home/'.agents/skills').iterdir()], ['clearwrite'])
         self.assertFalse(stage.exists())
+    def test_failed_move_restores_the_previous_install(self):
+        INSTALL.install(home=self.home, apply=True)
+        target = self.home/'.agents/skills/clearwrite'; (target/'SKILL.md').write_text('custom')
+        real_rename = Path.rename
+        def failing(self_path, dest):
+            if Path(dest) == target and '.clearwrite-staging' in str(self_path):
+                raise OSError(18, 'cross-device link')
+            return real_rename(self_path, dest)
+        with patch.object(Path, 'rename', failing):
+            with self.assertRaises(ValueError):
+                INSTALL.install(home=self.home, apply=True, replace=True)
+        self.assertEqual((target/'SKILL.md').read_text(), 'custom')
+        self.assertEqual([p.name for p in (self.home/'.agents/skills').iterdir()], ['clearwrite'])
     def test_failed_copy_leaves_the_install_untouched(self):
         INSTALL.install(home=self.home, apply=True)
         (self.home/'.agents/skills/clearwrite/SKILL.md').write_text('custom')
