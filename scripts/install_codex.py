@@ -101,11 +101,17 @@ def install(*,kind: str='skill',home: Path|None=None,project: Path|None=None,
                 raise ValueError(f'설치 파일 복사에 실패했습니다({exc}). 중간 사본이 {candidate}에 남았을 수 있습니다. 설치 위치는 바뀌지 않았습니다.') from exc
             staged=candidate;break
         if staged is None:raise ValueError('임시 설치 폴더 이름이 계속 겹칩니다. 다시 실행하세요.')
+        backup=None
         if target.exists():
             backup_dir.mkdir(parents=True,exist_ok=True)
             backup=backup_dir/(target.name+'.backup-'+str(time.time_ns()))
             target.rename(backup);report['backups'].append(str(backup))
-        staged.rename(target)
+        try:
+            staged.rename(target)
+        except OSError as exc:
+            # e.g. staging and skills/ on different filesystems: put the old install back.
+            if backup is not None:backup.rename(target)
+            raise ValueError(f'새 설치본을 옮기지 못했습니다({exc}). 기존 설치를 되돌렸습니다. 새 사본은 {staged}에 있습니다.') from exc
         try:stage_root.rmdir()  # only if empty; never recursive
         except OSError:pass
     if catalog_changed and catalog:
