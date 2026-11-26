@@ -87,6 +87,19 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(human["text"], self.f.items[p["item"]]["text"])
             self.assertIn(NE.CONTROL_CLOSING, degraded["text"])
 
+    def test_repeats_flip_sides_and_never_come_earlier(self):
+        for seed in range(25):
+            built = self.run_build(seed=seed, session_size=6)
+            where = {}
+            for s_index, session in enumerate(built["sessions"]):
+                for p in session:
+                    if p["type"] in ("main", "repeat"):
+                        where.setdefault(p["item"], {})[p["type"]] = (s_index, p["left"]["variant"])
+            for item, seen in where.items():
+                if "repeat" in seen:
+                    self.assertNotEqual(seen["main"][1], seen["repeat"][1], (seed, item))
+                    self.assertGreaterEqual(seen["repeat"][0], seen["main"][0], (seed, item))
+
     def test_session_size_is_a_maximum(self):
         for size in (4, 6, 9):
             built = self.run_build(session_size=size)
@@ -210,8 +223,106 @@ class HtmlTests(unittest.TestCase):
         self.assertEqual(page.count("</script>"), 2)
         data = re.search(r'<script id="session-data" type="application/json">(.*?)</script>', page, re.S).group(1)
         payload = json.loads(data.replace("<\\/", "</").replace("<\\!--", "<!--"))
-        self.assertEqual(payload["pairs"][0]["left"], "</script><script>alert(1)</script> 왼쪽")
+        self.assertEqual("".join(t for t, _ in payload["pairs"][0]["left"]), "</script><script>alert(1)</script> 왼쪽")
+        self.assertNotIn("innerHTML", page)
+        self.assertIn('id="pick-same"', page)
+        self.assertIn("집중도 확인용", page)
         self.assertIn(NE.QUESTION, data)
+
+
+class ReadabilityTests(unittest.TestCase):
+    def test_diff_segments_mark_only_changed_words_on_both_sides(self):
+        left, right = NE.diff_segments("나는 아침에 학교에 갔다.", "나는 저녁에 학교에 갔다.")
+        self.assertEqual("".join(t for t, _ in left), "나는 아침에 학교에 갔다.")
+        self.assertEqual("".join(t for t, _ in right), "나는 저녁에 학교에 갔다.")
+        self.assertEqual([t for t, m in left if m], ["아침에"])
+        self.assertEqual([t for t, m in right if m], ["저녁에"])
+        self.assertTrue(all(not t.isspace() for t, m in left + right if m))
+
+    def test_spacing_only_difference_is_still_marked(self):
+        left, right = NE.diff_segments("가 나", "가  나")
+        self.assertTrue(any(m for _, m in left) and any(m for _, m in right))
+
+    def test_markup_in_texts_keeps_the_page_valid(self):
+        import re as _re
+        pair = {"pair_id": "s01p01", "type": "main", "item": "x",
+                "left": {"variant": "a", "text": "<!-- 주석 --> 앞 </script><script>alert(1)</script>"},
+                "right": {"variant": "b", "text": "뒤 <b>굵게</b>"}}
+        page = NE.session_html("1-01-x", [pair])
+        data = _re.search(r'<script id="session-data" type="application/json">(.*?)</script>', page, _re.S).group(1)
+        self.assertNotIn("<", data)
+        payload = json.loads(data)
+        self.assertEqual("".join(t for t, _ in payload["pairs"][0]["left"]), pair["left"]["text"])
+
+    def test_highlight_can_be_turned_off(self):
+        pair = {"pair_id": "s01p01", "type": "main", "item": "x", "left": {"variant": "a", "text": "가 나"}, "right": {"variant": "b", "text": "가 다"}}
+        page = NE.session_html("1-01-x", [pair], highlight=False)
+        self.assertIn('[["가 나", false]]', page)
+
+    def test_tiny_differences_are_skipped(self):
+        f = Fixture(n_ai=4, n_human=2)
+        try:
+            for k, item in f.items.items():
+                if item["kind"] == "ai":
+                    long = item["text"] + " 이어지는 설명 문장이 길게 붙어 있다." * 6
+                    item["text"] = long
+                    (f.variants / "edited" / f"{k}.txt").write_bytes((long[:-1] + "!").encode())
+            built = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=1, min_diff=.03)
+            self.assertEqual({s["reason"] for s in built["skipped"]}, {"tiny_difference"})
+            self.assertFalse([p for s in built["sessions"] for p in s if p["type"] == "main"])
+            with self.assertRaises(ValueError):
+                NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=1, min_diff=.9)
+        finally:
+            f.close()
+
+    def test_default_session_size_is_twelve(self):
+        f = Fixture(n_ai=30, n_human=4)
+        try:
+            built = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=1)
+            self.assertTrue(all(len(s) <= 12 for s in built["sessions"]))
+        finally:
+            f.close()
+
+
+class EditUnitTests(unittest.TestCase):
+    BASE = "첫 문장이다. 둘째 문장은 길게 꾸민 말이다. 셋째 문장이다. 넷째 문장도 꾸민 말이다. 다섯째 문장이다."
+    OTHER = "첫 문장이다. 둘째 문장이다. 셋째 문장이다. 넷째 문장이다. 다섯째 문장이다."
+
+    def test_each_changed_sentence_is_a_unit_with_context(self):
+        units = NE.edit_units(self.BASE, self.OTHER)
+        self.assertEqual(units, [("첫 문장이다. 둘째 문장은 길게 꾸민 말이다. 셋째 문장이다.", "첫 문장이다. 둘째 문장이다. 셋째 문장이다."),
+                                 ("셋째 문장이다. 넷째 문장도 꾸민 말이다. 다섯째 문장이다.", "셋째 문장이다. 넷째 문장이다. 다섯째 문장이다.")])
+
+    def test_consecutive_rewrites_are_split_per_sentence(self):
+        base = "가 문장이다. 나 문장이다. 다 문장이다. 라 문장이다."
+        other = "가 문장이다. 나 바꿈. 다 바꿈. 라 문장이다."
+        units = NE.edit_units(base, other)
+        self.assertEqual(len(units), 2)
+        self.assertTrue(all(u[0].count(".") <= 2 for u in units))
+
+    def test_sentence_split_stays_together(self):
+        units = NE.edit_units("앞이다. 길게 이어진 문장이고 두 장면이 있다. 뒤다.", "앞이다. 길게 이어진 문장이다. 두 장면이 있다. 뒤다.")
+        self.assertEqual(len(units), 1)
+        self.assertIn("두 장면이 있다.", units[0][1])
+
+    def test_build_with_edit_units_samples_per_text(self):
+        f = Fixture(n_ai=3, n_human=4)
+        try:
+            for k, item in f.items.items():
+                if item["kind"] == "ai":
+                    item["text"] = self.BASE + " 여섯째 문장은 꾸민 말이다. 일곱째 문장이다."
+                    (f.variants / "edited" / f"{k}.txt").write_bytes((self.OTHER + " 여섯째 문장이다. 일곱째 문장이다.").encode())
+            built = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=4, unit="edit", units_per_text=2)
+            mains = [p for s in built["sessions"] for p in s if p["type"] == "main"]
+            self.assertEqual(len(mains), 6)
+            self.assertTrue(all(".u" in p["item"] for p in mains))
+            self.assertEqual(len({p["item"] for p in mains}), 6)
+            controls = [p for s in built["sessions"] for p in s if p["type"] == "control"]
+            self.assertTrue(controls and all(len(p["left"]["text"]) < 400 for p in controls))
+            with self.assertRaises(ValueError):
+                NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=4, unit="word")
+        finally:
+            f.close()
 
 
 class ScoreTests(unittest.TestCase):
@@ -256,6 +367,31 @@ class ScoreTests(unittest.TestCase):
     def test_not_enough_wins_is_not_shown(self):
         key, results = self.key_and_answers(candidate_wins=12)
         self.assertEqual(NE.score(key, results, candidate="edited")["decision"], "not_shown")
+
+    def test_ties_are_reported_and_left_out_of_the_count(self):
+        key, results = self.key_and_answers(candidate_wins=15)
+        for a in results[0]["answers"]:
+            if a["pair_id"] in {"m15", "m16", "m17"}:
+                a["choice"] = "same"
+        r = NE.score(key, results, candidate="edited")
+        self.assertEqual((r["main_pairs"], r["ties"], r["candidate_wins"]), (17, 3, 15))
+        self.assertEqual(r["wins_needed_for_alpha"], NE.required_wins(17))
+
+    def test_tie_on_an_attention_check_fails_it(self):
+        key, results = self.key_and_answers()
+        for a in results[0]["answers"]:
+            if a["pair_id"] in {"c0", "c1"}:
+                a["choice"] = "same"
+        r = NE.score(key, results, candidate="edited")
+        self.assertEqual(r["attention_checks"]["passed"], 2)
+        self.assertIn("attention_checks_failed", r["problems"])
+
+    def test_skipping_main_pairs_invalidates_the_session(self):
+        key, results = self.key_and_answers()
+        results[0]["answers"] = [a for a in results[0]["answers"] if a["pair_id"] not in {"m18", "m19"}]
+        r = NE.score(key, results, candidate="edited")
+        self.assertIn("main_pairs_incomplete", r["problems"])
+        self.assertEqual(r["decision"], "invalid_session")
 
     def test_unanswered_checks_invalidate_the_session(self):
         key, results = self.key_and_answers()
