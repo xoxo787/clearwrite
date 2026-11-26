@@ -227,7 +227,7 @@ class BundleInstallTests(unittest.TestCase):
             imported = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) for a in n.names}
             self.assertFalse((calls | imported) & banned, path)
     def test_install_stages_outside_skills_and_retries_name_collisions(self):
-        stage = self.home/'.agents/.clearwrite-staging'
+        stage = self.home.resolve()/'.agents/.clearwrite-staging'  # install resolves the base (macOS /private, Windows long names)
         real_copytree = shutil.copytree; seen = []
         def flaky(src, dst, *args, **kw):
             if Path(dst).parent == stage:  # top-level call; inner calls copy subfolders
@@ -244,7 +244,7 @@ class BundleInstallTests(unittest.TestCase):
         self.assertFalse(stage.exists())
     def test_failed_move_restores_the_previous_install(self):
         INSTALL.install(home=self.home, apply=True)
-        target = self.home/'.agents/skills/clearwrite'; (target/'SKILL.md').write_text('custom')
+        target = self.home.resolve()/'.agents/skills/clearwrite'; (target/'SKILL.md').write_text('custom')
         real_rename = Path.rename
         def failing(self_path, dest):
             if Path(dest) == target and '.clearwrite-staging' in str(self_path):
@@ -256,7 +256,7 @@ class BundleInstallTests(unittest.TestCase):
         self.assertEqual((target/'SKILL.md').read_text(), 'custom')
         self.assertEqual([p.name for p in (self.home/'.agents/skills').iterdir()], ['clearwrite'])
     def test_failed_move_messages_name_the_real_state(self):
-        target = self.home/'.agents/skills/clearwrite'
+        target = self.home.resolve()/'.agents/skills/clearwrite'
         real_rename = Path.rename
         def fail_into_target(self_path, dest):
             if Path(dest) == target:
@@ -271,7 +271,7 @@ class BundleInstallTests(unittest.TestCase):
             with self.assertRaises(ValueError) as both:
                 INSTALL.install(home=self.home, apply=True, replace=True)
         self.assertIn('되돌리지도 못했습니다', str(both.exception))
-        backup = next((self.home/'.agents/.clearwrite-backups').iterdir())
+        backup = next((self.home.resolve()/'.agents/.clearwrite-backups').iterdir())
         self.assertIn(str(backup), str(both.exception))
         self.assertEqual((backup/'SKILL.md').read_text(), 'custom')
     def test_failed_copy_leaves_the_install_untouched(self):
