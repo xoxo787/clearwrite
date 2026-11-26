@@ -256,6 +256,47 @@ class ReadabilityTests(unittest.TestCase):
             f.close()
 
 
+class EditUnitTests(unittest.TestCase):
+    BASE = "첫 문장이다. 둘째 문장은 길게 꾸민 말이다. 셋째 문장이다. 넷째 문장도 꾸민 말이다. 다섯째 문장이다."
+    OTHER = "첫 문장이다. 둘째 문장이다. 셋째 문장이다. 넷째 문장이다. 다섯째 문장이다."
+
+    def test_each_changed_sentence_is_a_unit_with_context(self):
+        units = NE.edit_units(self.BASE, self.OTHER)
+        self.assertEqual(units, [("첫 문장이다. 둘째 문장은 길게 꾸민 말이다. 셋째 문장이다.", "첫 문장이다. 둘째 문장이다. 셋째 문장이다."),
+                                 ("셋째 문장이다. 넷째 문장도 꾸민 말이다. 다섯째 문장이다.", "셋째 문장이다. 넷째 문장이다. 다섯째 문장이다.")])
+
+    def test_consecutive_rewrites_are_split_per_sentence(self):
+        base = "가 문장이다. 나 문장이다. 다 문장이다. 라 문장이다."
+        other = "가 문장이다. 나 바꿈. 다 바꿈. 라 문장이다."
+        units = NE.edit_units(base, other)
+        self.assertEqual(len(units), 2)
+        self.assertTrue(all(u[0].count(".") <= 2 for u in units))
+
+    def test_sentence_split_stays_together(self):
+        units = NE.edit_units("앞이다. 길게 이어진 문장이고 두 장면이 있다. 뒤다.", "앞이다. 길게 이어진 문장이다. 두 장면이 있다. 뒤다.")
+        self.assertEqual(len(units), 1)
+        self.assertIn("두 장면이 있다.", units[0][1])
+
+    def test_build_with_edit_units_samples_per_text(self):
+        f = Fixture(n_ai=3, n_human=4)
+        try:
+            for k, item in f.items.items():
+                if item["kind"] == "ai":
+                    item["text"] = self.BASE + " 여섯째 문장은 꾸민 말이다. 일곱째 문장이다."
+                    (f.variants / "edited" / f"{k}.txt").write_bytes((self.OTHER + " 여섯째 문장이다. 일곱째 문장이다.").encode())
+            built = NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=4, unit="edit", units_per_text=2)
+            mains = [p for s in built["sessions"] for p in s if p["type"] == "main"]
+            self.assertEqual(len(mains), 6)
+            self.assertTrue(all(".u" in p["item"] for p in mains))
+            self.assertEqual(len({p["item"] for p in mains}), 6)
+            controls = [p for s in built["sessions"] for p in s if p["type"] == "control"]
+            self.assertTrue(controls and all(len(p["left"]["text"]) < 400 for p in controls))
+            with self.assertRaises(ValueError):
+                NE.build(f.items, compare=("raw", "edited"), variants_dir=f.variants, seed=4, unit="word")
+        finally:
+            f.close()
+
+
 class ScoreTests(unittest.TestCase):
     def key_and_answers(self, n_main=20, candidate_wins=15, control_pass=4, consistent=True):
         sessions, answers = [[]], []

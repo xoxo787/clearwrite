@@ -192,11 +192,46 @@ def difference(a: str, b: str) -> float:
     return 1 - difflib.SequenceMatcher(None, a, b, autojunk=False).ratio()
 
 
+def edit_units(base: str, other: str) -> list[tuple[str, str]]:
+    """Each changed run of sentences as its own small pair, with one unchanged sentence of
+    context on each side when available (edit-level judging, after SALSA)."""
+    b_spans, o_spans = sentence_spans(base), sentence_spans(other)
+    bs = [base[a:b].strip() for a, b in b_spans]
+    os_ = [other[a:b].strip() for a, b in o_spans]
+    groups = []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, bs, os_, autojunk=False).get_opcodes():
+        if tag == "equal":
+            continue
+        if tag == "replace" and i2 - i1 == j2 - j1 > 1:
+            # Sentence-for-sentence rewrites become one short unit per sentence.
+            groups += [(i1 + t, i1 + t + 1, j1 + t, j1 + t + 1) for t in range(i2 - i1)]
+        else:
+            groups.append((i1, i2, j1, j2))  # splits, merges, insertions and deletions stay together
+    units = []
+    for i1, i2, j1, j2 in groups:
+        lo_b, lo_o = (i1 - 1, j1 - 1) if i1 > 0 and j1 > 0 and bs[i1 - 1] == os_[j1 - 1] else (i1, j1)
+        hi_b, hi_o = (i2, j2) if i2 < len(bs) and j2 < len(os_) and bs[i2] == os_[j2] else (i2 - 1, j2 - 1)
+        if hi_b < lo_b or hi_o < lo_o:
+            continue  # a pure insertion or deletion with no shared sentence to anchor it
+        a = base[b_spans[lo_b][0]:b_spans[hi_b][1]].strip()
+        b = other[o_spans[lo_o][0]:o_spans[hi_o][1]].strip()
+        if a and b and a != b:
+            units.append((a, b))
+    return units
+
+
 def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variants_dir: Path | None,
           seed: int, session_size: int = 12, repeat_share: float = .15, controls: int = 4,
           only: set[str] | None = None, max_chars: int | None = None,
-          min_diff: float | None = None) -> dict[str, Any]:
-    """Return {"sessions": [[pair, ...], ...], "skipped": [...]} with pairs carrying their key."""
+          min_diff: float | None = None, unit: str = "text", units_per_text: int = 2) -> dict[str, Any]:
+    """Return {"sessions": [[pair, ...], ...], "skipped": [...]} with pairs carrying their key.
+
+    unit="text" compares whole texts (or excerpts with max_chars); unit="edit" compares each
+    changed sentence run with its context, at most units_per_text per text."""
+    if unit not in {"text", "edit"}:
+        raise ValueError("unit은 text 또는 edit이어야 합니다.")
+    if unit == "edit" and units_per_text < 1:
+        raise ValueError("units_per_text는 1 이상이어야 합니다.")
     if max_chars is not None and max_chars < 60:
         raise ValueError("max_chars는 60자 이상이어야 합니다.")
     if min_diff is not None and not 0 <= min_diff < .5:
@@ -216,6 +251,16 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
         if a == b:
             skipped.append({"id": item["id"], "reason": "identical"})
             continue
+        if unit == "edit":
+            units = [(k, u) for k, u in enumerate(edit_units(a, b), 1) if not (min_diff and difference(*u) < min_diff)]
+            if not units:
+                skipped.append({"id": item["id"], "reason": "no_edit_unit"})
+                continue
+            # Sample a few edits per text so one heavily edited text cannot dominate.
+            for k, (ua, ub) in sorted(rng.sample(units, min(units_per_text, len(units)))):
+                main.append({"type": "main", "item": f"{item['id']}.u{k}", "variants": [left_variant, right_variant],
+                             "texts": [ua, ub]})
+            continue
         if max_chars:
             a, b = aligned_excerpts(a, b, max_chars)
             if a == b:
@@ -229,7 +274,8 @@ def build(items: dict[str, dict[str, Any]], *, compare: tuple[str, str], variant
     humans = [i for i in items.values() if i["kind"] == "human"]
     rng.shuffle(humans)
     def control_text(h: dict[str, Any]) -> str:
-        return lead_excerpt(h["text"], max_chars) if max_chars else h["text"]
+        limit = max_chars or (160 if unit == "edit" else None)  # edit units are a few sentences long
+        return lead_excerpt(h["text"], limit) if limit else h["text"]
     checks = [{"type": "control", "item": h["id"], "variants": ["human", "degraded"],
                "texts": [control_text(h), degrade(control_text(h))]} for h in humans[:controls]]
     repeats = [dict(p, type="repeat", of=p["item"]) for p in rng.sample(main, round(len(main) * repeat_share))] if main else []
@@ -472,6 +518,8 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--session-size", type=int, default=12, help="회차당 최대 쌍 수")
     b.add_argument("--min-diff", type=float, help="두 판본의 차이가 이 비율보다 작은 쌍은 뺌(예: 0.03)")
     b.add_argument("--no-highlight", action="store_true", help="다른 부분 형광펜 표시를 끔")
+    b.add_argument("--unit", choices=["text", "edit"], default="text", help="text: 글(발췌) 단위, edit: 바뀐 문장 단위")
+    b.add_argument("--units-per-text", type=int, default=2, help="edit 단위에서 글 하나당 뽑을 편집 수")
     b.add_argument("--repeat-share", type=float, default=.15)
     b.add_argument("--controls", type=int, default=4)
     b.add_argument("--max-chars", type=int, help="쌍마다 첫 수정 부근의 같은 대목만 문장 단위로 잘라 이 글자 수 안팎으로 보여 줌")
@@ -495,13 +543,15 @@ def main(argv: list[str] | None = None) -> int:
             items = read_items(args.items)
             built = build(items, compare=compare, variants_dir=args.variants, seed=args.seed,
                           session_size=args.session_size, repeat_share=args.repeat_share, controls=args.controls,
-                          max_chars=args.max_chars, min_diff=args.min_diff)
+                          max_chars=args.max_chars, min_diff=args.min_diff, unit=args.unit,
+                          units_per_text=args.units_per_text)
             if not any(built["sessions"]):
                 raise ValueError("만들 수 있는 쌍이 없습니다.")
             ids = [session_id(args.seed, n, session) for n, session in enumerate(built["sessions"], 1)]
             pages = [session_html(sid, session, highlight=not args.no_highlight) for sid, session in zip(ids, built["sessions"])]
             meta = {"schema_version": "1.2", "compare": list(compare), "seed": args.seed, "max_chars": args.max_chars,
-                    "min_diff": args.min_diff, "highlight": not args.no_highlight,
+                    "min_diff": args.min_diff, "highlight": not args.no_highlight, "unit": args.unit,
+                    "units_per_text": args.units_per_text if args.unit == "edit" else None,
                     "items_sha256": hashlib.sha256(args.items.read_bytes()).hexdigest(), "skipped": built["skipped"],
                     "session_ids": ids, "sessions": built["sessions"]}
             # The key is written first: a session page without its key would be unscorable.
