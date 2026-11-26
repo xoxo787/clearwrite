@@ -48,7 +48,7 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
 - `prepare`는 `-o` 없이 실행해 출력 JSON을 바로 읽는다. 별도의 `task.json`을 만들고 다시 읽지 않는다.
 - `apply`에는 항상 `--summary`를 붙인다. 제안별 적용·제외 사유와 결과 본문이 한 번에 나오므로 결과 파일이나 `report.json`을 따로 읽지 않는다. `report.json`은 요약만으로 판단할 수 없을 때만 읽는다.
 - 같은 이름의 출력 파일이 이미 있으면 덮어쓰지 말고 `edited-2.txt`처럼 새 이름을 쓴다.
-- 가볍게(`proofreader`) 범위와 검토 모드에서는 `references/` 문서를 읽지 않는다. 문장 구조를 고칠 때만 [편집 원칙](references/editorial_rules.md)과 [판단 예시](references/editing_examples.md)를 읽는다.
+- 가볍게(`proofreader`) 범위와 검토 모드에서는 `references/` 문서를 읽지 않는다. 문장 구조를 고칠 때만 [편집 원칙](references/editorial_rules.md)과 [판단 예시](references/editing_examples.md)를 읽고, `natural`이면 [구조 패턴](references/structure_patterns.md)도 읽는다.
 
 ## 요청 구분: 검토와 윤문
 
@@ -62,7 +62,7 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
 
 - 요청에 이미 있는 항목은 묻지 않는다. 예: "칼럼처럼"은 강도가 정해졌으므로 말투만, "합니다체로"는 말투가 정해졌으므로 강도만 묻는다. 같은 대화에서 이미 고른 값은 사용자가 바꾸라고 하기 전까지 재사용한다.
 - 호스트에 선택지 질문 도구가 있으면(예: Claude Code의 AskUserQuestion) 두 질문을 한 번에 보낸다. 없으면 번호로 고르는 짧은 텍스트 질문을 한 번 보낸다. 원문을 질문에 다시 붙이지 않는다.
-- 강도 질문 선택지: ① 보통 — 말투 유지, 반복·상투적 예고 정리(`editor`, 기본·추천) ② 가볍게 — 맞춤법·띄어쓰기·조사만(`proofreader`) ③ 적극적으로 — 문장 재구성·리듬(`columnist`) ④ 쉽게 — 긴 문장 나누기·쉬운 낱말(`plain`). 격식 보고서체(`formal`)나 다정한 안내체(`friendly`)는 직접 입력으로 고를 수 있다고 덧붙인다.
+- 강도 질문 선택지: ① 보통 — 말투 유지, 반복·상투적 예고 정리(`editor`, 기본·추천) ② 가볍게 — 맞춤법·띄어쓰기·조사만(`proofreader`) ③ 자연스럽게 — 구조까지 고쳐 자연스럽게 읽히도록(`natural`) ④ 적극적으로 — 문장 재구성·리듬(`columnist`). 쉬운 말(`plain`), 격식 보고서체(`formal`), 다정한 안내체(`friendly`)는 직접 입력으로 고를 수 있다고 덧붙인다.
 - 말투 질문 선택지: ① 원문 말투 유지(`keep`, 기본·추천) ② 합니다체(`hamnida`) ③ 해요체(`haeyo`) ④ 한다체(`handa`). 원문이 한국어가 아니거나 `formal`·`friendly`를 골랐으면 말투 질문은 생략한다. 이때 `--style`을 비워 페르소나 기본 말투를 따른다.
 - 질문할 수 없는 실행(비대화형 `claude -p`, `codex exec` 등)이거나 사용자가 "바로 해줘", "알아서"라고 하면 묻지 않고 `editor` + `keep`으로 진행한다. 이 경우 결과 메모에 기본값으로 진행했다고 한 줄 적는다.
 - 질문은 강도와 말투만 묻는다. 사용 목적·독자·보호 용어는 원문과 요청에서 판단하고, 꼭 필요할 때만 따로 묻는다. 문체 평가만 요청했거나 모델 없는 규칙 편집(`rewrite`)을 요청했으면 묻지 않는다.
@@ -81,6 +81,11 @@ python "<실제 스킬 경로>/scripts/clearwrite_skill.py" doctor
    | `columnist` 칼럼니스트 | 적극적으로 | 관점 유지, 문장 재구성·리듬·군더더기 삭제 | 50% · safe-subset |
    | `plain` 쉬운 말 해설가 | 적극적으로 | 긴 문장 나누기, 쉬운 낱말 | 50% · safe-subset |
    | `friendly` 다정한 안내자 | 적극적으로 · 말투 변경 | 해요체 통일 | 50% · safe-subset |
+   | `natural` 자연스러운 글 편집자 | 적극적으로 · 구조 변경 | 문장 합치기·나누기·순서 바꾸기, 정보 없는 예고·감상 문장 삭제, 상투적 묘사 정리 | 50% · safe-subset · 분량 75% |
+
+   `natural`을 고르면 `prepare` 출력의 `structure`에 엔진이 센 구조 습관(연결어미 뒤 쉼표, 기계적 열거, 예고·감상 문장, 상투적 묘사, '단순히 A가 아니라 B')과 지배적 습관 목록 `dominant`가 들어 있다. 제안을 쓰기 전에 [구조 패턴](references/structure_patterns.md)을 읽고, 이 글에서 반복되는 습관 3~6개를 먼저 정한 뒤 그것부터 고친다. 세는 값은 고칠 후보일 뿐 낮춰야 할 점수가 아니다. `dominant`가 비어 있으면 억지로 구조를 바꾸지 않는다.
+
+   `natural`에서는 한 문단 안의 여러 문장을 한 편집으로 묶어 합치거나 순서를 바꿀 수 있고, 정보 없는 문장은 `replacement`를 빈 문자열로 두어 지울 수 있다. 엔진은 이 페르소나에서 편집 하나하나의 축약 검사는 건너뛰지만, 숫자·범위·주장 강도·방향·보호 구간 검사와 문서 전체 분량 검사(공백 제외 75% 이상)는 그대로 한다. 지운 문장은 최종 메모에 모두 적는다.
 
    종결어미 통일은 페르소나와 별도로 `--style`로 정한다: `keep`(원문 유지), `hamnida`(합니다체), `haeyo`(해요체), `handa`(한다체). 비우면 `formal`은 합니다체, `friendly`는 해요체, 나머지는 keep이다. 스타일을 바꾸면 변경 한도는 최소 35%, 적용은 safe-subset이며 `report.json`의 `style_conformance`로 목표 어미 일치율을 확인한다. 일치율은 어미 규칙 판정이므로 문법 검증으로 표현하지 않는다.
 
