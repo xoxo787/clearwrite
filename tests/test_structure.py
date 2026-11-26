@@ -79,6 +79,21 @@ class PersonaTests(unittest.TestCase):
         self.assertNotIn("한 편집은 한 문장을 넘지 않게", text)
         self.assertIn("부정·가능성·조건", text)
 
+    def test_natural_edits_only_diagnosed_spans(self):
+        guidance = get_persona("natural").guidance
+        for phrase in ["1단계 진단", "진단한 구간만 고친다", "구체성 부족 구간은 고치지 않는다", "동의어 바꾸기", "끼워 넣기", "셋 이상 잇따르지 않게",
+                       "구체성 부족을 따라 고치지 않는다", "사실·숫자·조건이 있으면 지우지 않는다", "감정은 남기고"]:
+            self.assertIn(phrase, guidance)
+        skill = (ROOT / "skills/clearwrite/SKILL.md").read_text(encoding="utf-8")
+        for rule in ["`cliche`", "`exposition`", "`purple`", "`wording`", "`structure`", "`punctuation`", "`consistency`", "`specificity`"]:
+            self.assertIn(rule, skill)
+        guide = (ROOT / "skills/clearwrite/references/structure_patterns.md").read_text(encoding="utf-8")
+        self.assertLess(guide.index("## 진단한 구간만 고친다"), guide.index("## 패턴별 판단"))
+        self.assertIn("디테일을 지어내지 말고", guide)
+        self.assertIn("인용·대사는 그대로 둔다", guide)
+        self.assertNotIn('"삼삼오오 모인 주민들" → "모인 주민들"', guide)
+        self.assertIn("한국어 독자로 효과를 검증하지는 않았다", skill)
+
     def test_prepare_adds_diagnosis_only_for_natural(self):
         natural, editor = prepare(AI_LIKE, persona="natural"), prepare(AI_LIKE, persona="editor")
         self.assertIn("구조 진단", natural["instruction"])
